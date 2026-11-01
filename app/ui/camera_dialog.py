@@ -117,6 +117,7 @@ class CameraDialog(QDialog):
         self.btn_close.clicked.connect(self.close)
         layout.addWidget(self.btn_close)
 
+        self.marked = set()
         self.thread = RecognitionThread(self.course_id)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.update_status_signal.connect(self.handle_attendance)
@@ -134,10 +135,12 @@ class CameraDialog(QDialog):
         p = convert_to_Qt_format.scaled(960, 540, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
-    def handle_attendance(self, student_id, name):
+    def handle_attendance(self, mssv, name):
         self.lbl_status.setText(f"Đã nhận diện: {name}")
         self.lbl_status.setStyleSheet("font-size: 18px; font-weight: bold; color: #27ae60; margin-top: 10px;")
-        update_attendance(student_id, self.course_id, self.date_str, STATUS_PRESENT)
+        # The thread reports every matching frame; write to the DB only once per student
+        if mssv not in self.marked and update_attendance(mssv, self.course_id, self.date_str, STATUS_PRESENT):
+            self.marked.add(mssv)
 
     def closeEvent(self, event):
         self.thread.stop()

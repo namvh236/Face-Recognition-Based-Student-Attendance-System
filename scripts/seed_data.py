@@ -1,9 +1,7 @@
 """Seed sample teachers, courses and students. Run from the repo root: python -m scripts.seed_data"""
-import os
 import random
 from datetime import date, timedelta
 
-from app.config import RAW_FACES_DIR
 from app.database.connector import init_db, get_session
 from app.database.models import User, Course, Student
 
@@ -29,30 +27,8 @@ def generate_phone():
     suffix = "".join([str(random.randint(0, 9)) for _ in range(7)])
     return f"{random.choice(prefixes)}{suffix}"
 
-def check_student_avatar(mssv):
-    """Return the repo-relative path of data/raw_faces/<mssv>.(jpg|png|jpeg) if it exists, else None."""
-    if not os.path.exists(RAW_FACES_DIR):
-        return None
-        
-    extensions = [".jpg", ".png", ".jpeg"]
-    
-    for ext in extensions:
-        file_name = f"{mssv}{ext}"
-        full_path = os.path.join(RAW_FACES_DIR, file_name)
-        
-        if os.path.exists(full_path):
-            # Stored relative to the repo root, e.g. data/raw_faces/9900000001.jpg
-            return f"data/raw_faces/{file_name}"
-            
-    return None
-
 def seed():
     print("Initializing database...")
-    
-    # Ensure raw_faces exists so the avatar lookup below cannot fail
-    if not os.path.exists(RAW_FACES_DIR):
-        os.makedirs(RAW_FACES_DIR)
-        print(f"Created empty directory {RAW_FACES_DIR}. Put <mssv>.jpg photos there to link avatars.")
 
     init_db() 
     session = get_session()
@@ -65,14 +41,12 @@ def seed():
             "n": "Teacher One", 
             "c": "GV001", 
             "email": "teacher1@example.com",
-            "avt": "assets/img/teacher/gv001.jpg"
         },
         {
             "u": "gv002", 
             "n": "Teacher Two", 
             "c": "GV002", 
             "email": "teacher2@example.com",
-            "avt": "assets/img/teacher/gv002.jpg"
         }
     ]
 
@@ -81,7 +55,6 @@ def seed():
             gv = User(
                 username=t["u"], password="123", fullname=t["n"], user_code=t["c"], role="teacher",
                 phone_number=generate_phone(),
-                avatar=t["avt"],
                 email=t["email"]
             )
             session.add(gv)
@@ -103,11 +76,11 @@ def seed():
     for c_data in courses_data:
         existing = session.query(Course).filter_by(course_code=c_data["code"]).first()
         if not existing:
-            course = Course(course_code=c_data["code"], course_name=c_data["name"], teacher_id=c_data["teacher"].id)
+            course = Course(course_code=c_data["code"], course_name=c_data["name"],
+                            credits=c_data["credits"], teacher_id=c_data["teacher"].id)
             session.add(course)
             session.commit()
             course_objects.append(course)
-            credits=c_data["credits"]
         else:
             course_objects.append(existing)
 
@@ -115,7 +88,6 @@ def seed():
     print("Creating Students...")
     counter = 1 
     total_new = 0
-    count_with_avatar = 0
     
     for course in course_objects:
         num_students = random.randint(15, 20)
@@ -130,9 +102,6 @@ def seed():
 
             name = generate_random_name()
             
-            student_avatar_path = check_student_avatar(mssv)
-            if student_avatar_path:
-                count_with_avatar += 1
             email_sv = f"{mssv}@humg.edu.vn"
             user_sv = User(
                 username=mssv, password="123", fullname=name, user_code=mssv, role="student"
@@ -145,7 +114,6 @@ def seed():
                 class_name=random.choice(CLASSES_ADMIN), 
                 course_id=course.id,
                 user_id=user_sv.id,
-                avatar=student_avatar_path,
                 email=email_sv
             )
             session.add(student)
@@ -158,7 +126,6 @@ def seed():
     
     print("-" * 50)
     print(f"Done. Added {total_new} students.")
-    print(f"{count_with_avatar} students have a photo in 'data/raw_faces'.")
     print("-" * 50)
 
 if __name__ == "__main__":

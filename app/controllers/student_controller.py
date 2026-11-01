@@ -1,97 +1,96 @@
+from dataclasses import dataclass
+from typing import Optional
+
 from app.database.connector import get_session
-from app.database.models import Student, Attendance, User, Course 
+from app.database.models import Student, Attendance, User, Course
+
+NO_TEACHER_NAME = "Chưa cập nhật"
+NO_TEACHER_PHONE = "Chưa có SĐT"
+
+
+@dataclass
+class UnenrolledStudent:
+    """Stand-in for a student account that has no Student row yet (not on any class roster)."""
+    name: str
+    mssv: str
+    email: Optional[str] = None
+    id: Optional[int] = None
+    dob: Optional[object] = None
+    class_name: Optional[str] = None
+
 
 def get_student_by_user_id(user_id):
+    """Return the Student for a login account.
+
+    The first sign-in links the account to the roster row with the same MSSV. Accounts that match
+    no roster row get an `UnenrolledStudent` placeholder, or None if the user does not exist.
+    """
     session = get_session()
-    student = session.query(Student).filter_by(user_id=user_id).first()
-    
-    if student:
+    try:
+        student = session.query(Student).filter_by(user_id=user_id).first()
+
+        if student is None:
+            user = session.get(User, user_id)
+            if user is None:
+                return None
+            student = session.query(Student).filter_by(mssv=user.user_code, user_id=None).first()
+            if student is None:
+                return UnenrolledStudent(name=user.fullname, mssv=user.user_code, email=user.email)
+            student.user_id = user.id
+            session.commit()
+            session.refresh(student)
+
         session.expunge(student)
-        session.close()
         return student
-    
-    user = session.query(User).filter_by(id=user_id).first()
-    if user:
-        class TempStudent:
-            def __init__(self, name, mssv, id):
-                self.name = name
-                self.mssv = mssv
-                self.id = id 
-                self.course = None 
-
-        temp_student = TempStudent(name=user.fullname, mssv=user.user_code, id=None)
+    finally:
         session.close()
-        return temp_student
 
-    session.close()
-    return None
 
-def get_student_courses(student_id):
-    session = get_session()
-    student = session.query(Student).filter_by(id=student_id).first()
-    courses = []
-
-    if student and student.course:
-        session.expunge(student.course)
-        courses.append(student.course)
-    
-    session.close()
-    return courses
 def get_student_course_details(student_id):
-    """List the student's courses with teacher info."""
+    """List the student's courses with teacher info (at most one: `Student.mssv` is unique)."""
+    if student_id is None:
+        return []
     session = get_session()
-    student = session.query(Student).filter_by(id=student_id).first()
-    
-    results = []
+    try:
+        student = session.get(Student, student_id)
+        if not student or not student.course:
+            return []
 
-    if student and student.course:
-        c = student.course
-
-        teacher_name = "Chưa cập nhật"
-        teacher_phone = "Chưa có SĐT"
-        
-        if c.teacher:
-            teacher_name = c.teacher.fullname if c.teacher.fullname else teacher_name
-            teacher_phone = c.teacher.phone_number if c.teacher.phone_number else teacher_phone
-            
-        results.append({
-            "course_name": c.course_name,
-            "course_code": c.course_code,
-            "teacher_name": teacher_name,
-            "teacher_phone": teacher_phone
-        })
-        
-    session.close()
-    return results
+        course = student.course
+        teacher = course.teacher
+        return [{
+            "course_id": course.id,
+            "course_name": course.course_name,
+            "course_code": course.course_code,
+            "teacher_name": (teacher.fullname if teacher else None) or NO_TEACHER_NAME,
+            "teacher_phone": (teacher.phone_number if teacher else None) or NO_TEACHER_PHONE,
+        }]
+    finally:
+        session.close()
 
 
 def get_student_attendance_history(student_id, course_id):
+    if student_id is None:
+        return []
     session = get_session()
+    try:
+        course = session.get(Course, course_id)
+        teacher = course.teacher if course else None
+        teacher_name = (teacher.fullname if teacher else None) or NO_TEACHER_NAME
+        teacher_phone = (teacher.phone_number if teacher else None) or NO_TEACHER_PHONE
 
-    course = session.query(Course).filter_by(id=course_id).first()
-    
-    t_name = "---"
-    t_phone = "---"
-    
-    if course and course.teacher:
-        t_name = course.teacher.fullname if course.teacher.fullname else "Chưa cập nhật"
-        t_phone = course.teacher.phone_number if course.teacher.phone_number else "Chưa có SĐT"
+        attendances = (session.query(Attendance)
+                       .filter_by(student_id=student_id, course_id=course_id)
+                       .order_by(Attendance.date.desc())
+                       .all())
 
-    attendances = session.query(Attendance).filter_by(
-        student_id=student_id, 
-        course_id=course_id
-    ).order_by(Attendance.date.desc()).all()
-
-    result = []
-    for a in attendances:
-        result.append({
+        return [{
             "date": a.date,
             "time": a.time,
             "status": a.status,
-            "note": a.note,
-            "teacher_name": t_name,   
-            "teacher_phone": t_phone  
-        })
-        
-    session.close()
-    return result
+            "note": a.note or "",
+            "teacher_name": teacher_name,
+            "teacher_phone": teacher_phone,
+        } for a in attendances]
+    finally:
+        session.close()

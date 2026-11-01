@@ -86,18 +86,14 @@ def embeddings_from_dir(directory, report=None):
     return result
 
 
-def enroll_face(mssv, frame):
-    """Save the photo to ENROLLED_FACES_DIR and update the cache. Return True if a face was found."""
+def enroll_face(mssv, frame, embedding):
+    """Save the photo to ENROLLED_FACES_DIR and store its embedding in the cache."""
     os.makedirs(ENROLLED_FACES_DIR, exist_ok=True)
     cv2.imwrite(os.path.join(ENROLLED_FACES_DIR, f"{mssv}.jpg"), frame)
 
-    embedding = get_face_embedding(frame)
-    if embedding is None:
-        return False
     cache = load_cache()
     cache[mssv] = embedding
     save_cache(cache)
-    return True
 
 
 def cosine_similarities(embedding, known_embeddings):

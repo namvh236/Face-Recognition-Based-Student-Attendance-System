@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QFrame, QGraphicsDropShadowEffect, QAction
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QFrame, QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 from app.controllers.auth_controller import authenticate_user

@@ -1,17 +1,29 @@
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QPushButton, QFrame, QTableWidget, QTableWidgetItem, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                             QPushButton, QFrame, QTableWidget, QTableWidgetItem,
                              QHeaderView, QGraphicsDropShadowEffect, QLineEdit, QDialog, QAbstractItemView, QGridLayout)
-from PyQt5.QtCore import Qt, QDate, QRect
-from PyQt5.QtGui import QColor, QPixmap, QPainter, QPainterPath, QPen, QFont
+from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtGui import QColor, QPixmap
 from app.config import IMG_DIR, STYLES_DIR
 from app.constants import STATUS_ABSENT, STATUS_PRESENT
 from app.controllers.student_controller import (
-    get_student_by_user_id, 
-    get_student_courses, 
+    get_student_by_user_id,
     get_student_attendance_history,
-    get_student_course_details 
+    get_student_course_details,
 )
+from app.ui.avatar import circular_pixmap, find_student_photo
+
+AVATAR_COLORS = ["#1abc9c", "#2ecc71", "#3498db", "#9b59b6", "#34495e", "#f1c40f", "#e67e22", "#e74c3c", "#95a5a6"]
+
+
+def student_avatar(student, size, ring_color, ring_width):
+    """Round avatar from the student's photo, or a colored disc with their initial."""
+    name = (student.name or "").strip()
+    initial = name.split()[-1][0].upper() if name else "SV"
+    color = AVATAR_COLORS[sum(map(ord, name)) % len(AVATAR_COLORS)]
+    return circular_pixmap(size, find_student_photo(student.mssv), initial, color,
+                           ring_color, ring_width, font_size=size // 3)
+
 
 # Student profile dialog
 class StudentProfileDialog(QDialog):
@@ -69,17 +81,8 @@ class StudentProfileDialog(QDialog):
         style_lbl = "color: #95a5a6; font-size: 14px; font-weight: 600;"
         style_val = "color: #2c3e50; font-size: 16px; font-weight: bold;"
 
-        dob_str = "---"
-        if self.s_info.dob:
-             try: dob_str = self.s_info.dob.strftime("%d/%m/%Y")
-             except: dob_str = str(self.s_info.dob)
-        email_str = "---"
-        if hasattr(self.s_info, 'email') and self.s_info.email:
-            email_str = self.s_info.email
-        elif hasattr(self.s_info, 'user') and hasattr(self.s_info.user, 'email') and self.s_info.user.email:
-             email_str = self.s_info.user.email
-        else:
-             email_str = f"{self.s_info.mssv}@humg.edu.vn"
+        dob_str = self.s_info.dob.strftime("%d/%m/%Y") if self.s_info.dob else "---"
+        email_str = self.s_info.email or f"{self.s_info.mssv}@humg.edu.vn"
 
         grid.addWidget(QLabel("Ngày sinh:"), 0, 0)
         lbl_dob_val = QLabel(dob_str); lbl_dob_val.setStyleSheet(style_val)
@@ -157,42 +160,7 @@ class StudentProfileDialog(QDialog):
         layout.addWidget(btn_close)
 
     def load_avatar_circle(self):
-        size = 140
-        final_pixmap = None
-
-        possible_paths = [os.path.join(IMG_DIR, f"{self.s_info.mssv}.jpg"), os.path.join(IMG_DIR, f"{self.s_info.mssv}.png")]
-        for p in possible_paths:
-            if os.path.exists(p): 
-                src = QPixmap(p)
-                if not src.isNull(): final_pixmap = src; break
-
-        rounded = QPixmap(size, size); rounded.fill(Qt.transparent)
-        painter = QPainter(rounded)
-        painter.setRenderHint(QPainter.Antialiasing, True); painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-        path = QPainterPath(); path.addEllipse(0, 0, size, size); painter.setClipPath(path)
-
-        if final_pixmap:
-            painter.drawPixmap(0, 0, final_pixmap.scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
-        else:
-            palette = ["#1abc9c", "#2ecc71", "#3498db", "#9b59b6", "#34495e", "#f1c40f", "#e67e22", "#e74c3c", "#95a5a6"]
-            idx = sum(ord(c) for c in self.s_info.name) % len(palette)
-            bg_color = palette[idx]
-            
-            painter.setBrush(QColor(bg_color)) 
-            painter.setPen(Qt.NoPen)
-            painter.drawRect(0, 0, size, size)
-            
-            painter.setPen(QColor("white"))
-            font = QFont("Segoe UI", 50, QFont.Bold) 
-            painter.setFont(font)
-            initial = self.s_info.name.strip().split()[-1][0].upper() if self.s_info.name else "SV"
-            painter.drawText(QRect(0, 0, size, size), Qt.AlignCenter, initial)
-
-        painter.setClipping(False)
-        pen = QPen(QColor("#3498db")); pen.setWidth(4); painter.setPen(pen); painter.setBrush(Qt.NoBrush)
-        painter.drawEllipse(2, 2, size-4, size-4)
-        painter.end()
-        self.ava.setPixmap(rounded)
+        self.ava.setPixmap(student_avatar(self.s_info, size=140, ring_color="#3498db", ring_width=4))
 
 
 # Status badge label
@@ -290,8 +258,7 @@ class StudentWindow(QWidget):
 
         action_bar = QHBoxLayout()
         lbl_table = QLabel("Lịch sử điểm danh chi tiết"); lbl_table.setStyleSheet("font-size: 18px; font-weight: 700; color: #2c3e50;")
-        btn_report = QPushButton("Báo cáo sai sót"); btn_report.setObjectName("btn_report"); btn_report.setCursor(Qt.PointingHandCursor)
-        action_bar.addWidget(lbl_table); action_bar.addStretch(); action_bar.addWidget(btn_report)
+        action_bar.addWidget(lbl_table)
         
         content_layout.addSpacing(10); content_layout.addLayout(action_bar)
 
@@ -372,49 +339,21 @@ class StudentWindow(QWidget):
         if self.s_info:
             self.lname.setText(self.s_info.name)
             self.lid.setText(self.s_info.mssv)
-            possible_paths = [os.path.join(IMG_DIR, f"{self.s_info.mssv}.jpg"), os.path.join(IMG_DIR, f"{self.s_info.mssv}.png")]
-            final_path = None
-            for p in possible_paths:
-                if os.path.exists(p): final_path = p; break
-            size = 100
-            rounded = QPixmap(size, size)
-            rounded.fill(Qt.transparent)
-            painter = QPainter(rounded)
-            painter.setRenderHint(QPainter.Antialiasing, True)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-            
-            path = QPainterPath(); path.addEllipse(0, 0, size, size); painter.setClipPath(path)
-            
-            if final_path:
-                 src = QPixmap(final_path)
-                 painter.drawPixmap(0, 0, src.scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
-            else:
-                 default_path = os.path.join(IMG_DIR, "student_avatar.png")
-                 if os.path.exists(default_path):
-                     src = QPixmap(default_path)
-                     painter.drawPixmap(0, 0, src.scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
-                 else:
-                     painter.setBrush(QColor("#bdc3c7")); painter.setPen(Qt.NoPen); painter.drawRect(0, 0, size, size)
-                     painter.setPen(QColor("white")); font = QFont("Arial", 30, QFont.Bold); painter.setFont(font)
-                     initial = self.s_info.name.strip().split()[-1][0].upper() if self.s_info.name else "SV"
-                     painter.drawText(QRect(0, 0, size, size), Qt.AlignCenter, initial)
-
-            painter.setClipping(False); pen = QPen(QColor("white")); pen.setWidth(3); painter.setPen(pen); painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(1, 1, size-2, size-2); painter.end()
-            self.ava.setStyleSheet("background: transparent;"); self.ava.setPixmap(rounded)
+            self.ava.setStyleSheet("background: transparent;")
+            self.ava.setPixmap(student_avatar(self.s_info, size=100, ring_color="white", ring_width=3))
             
             self.load_courses()
 
     def load_courses(self):
-        courses = get_student_courses(self.s_info.id)
+        courses = get_student_course_details(self.s_info.id)
         for i in reversed(range(self.courses_box.count())): 
             self.courses_box.itemAt(i).widget().setParent(None)
         self.course_buttons.clear()
 
         for c in courses:
-            b = QPushButton(c.course_name)
+            b = QPushButton(c["course_name"])
             b.setCheckable(True); b.setObjectName("sidebar_btn")
-            b.clicked.connect(lambda _, cid=c.id, cn=c.course_name: self.sel_course(cid, cn))
+            b.clicked.connect(lambda _, cid=c["course_id"], cn=c["course_name"]: self.sel_course(cid, cn))
             self.courses_box.addWidget(b); self.course_buttons.append(b) 
         if self.course_buttons: self.course_buttons[0].click()
 
@@ -443,11 +382,9 @@ class StudentWindow(QWidget):
         for r, i in enumerate(hist):
             self.tb.setRowHeight(r, 60)
             
-            raw_date = i['date']; display_date = raw_date
-            try:
-                q_date = QDate.fromString(raw_date, "yyyy-MM-dd")
-                if q_date.isValid(): display_date = q_date.toString("dd-MM-yyyy")
-            except: pass
+            display_date = i['date']
+            q_date = QDate.fromString(i['date'], "yyyy-MM-dd")
+            if q_date.isValid(): display_date = q_date.toString("dd-MM-yyyy")
             da = QTableWidgetItem(display_date); da.setTextAlignment(Qt.AlignCenter); self.tb.setItem(r, 0, da)
             
             ti = QTableWidgetItem(i['time']); ti.setTextAlignment(Qt.AlignCenter); self.tb.setItem(r, 1, ti)

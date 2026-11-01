@@ -10,8 +10,8 @@ A desktop application that takes class attendance from a webcam. A teacher opens
 
 - **Live recognition:** webcam frames are matched against stored face embeddings using InsightFace and cosine similarity.
 - **Role-based UI:** separate teacher and student interfaces, each with its own login.
-- **Attendance management:** per-course, per-date records with *Present*, *Absent* and *Not yet marked* states; teachers can override any status manually.
-- **Student enrollment:** add a student and capture their face in one step. The embedding cache is updated immediately, so no separate training stage is needed.
+- **Attendance management:** per-course, per-date records with *Present*, *Absent* and *Not yet marked* states; teachers can override any status and add a note per student.
+- **Student enrollment:** add a student and capture their face in one step; photos without a detectable face are rejected. The embedding cache is updated immediately, so no separate training stage is needed.
 - **Excel import and export:** import a class roster (`.xlsx`, `.xls`, `.csv`) and export attendance reports to `.xlsx`.
 - **Search and filter:** find students by name or ID and filter by attendance status.
 
@@ -102,10 +102,10 @@ Run the scripts from the repository root with `python -m`, not `python scripts/<
 ## Usage
 
 1. **Sign in** as a teacher and pick a course in the sidebar.
-2. **Add students** one by one with *Thêm sinh viên* (fill in the form and capture a photo), or import a roster with *Nhập file lớp*. See `samples/dsa_list.xlsx` for the expected layout.
-3. **Take attendance** with *Bắt đầu điểm danh*. Recognized students are marked present; change any status manually from the table if needed.
+2. **Add students** one by one with *Thêm sinh viên* (fill in the form and capture a photo), or import a roster with *Nhập file lớp* (see `samples/dsa_list.xlsx` for the layout). Students imported from Excel have no face yet: open *Thêm sinh viên* with their MSSV to capture it.
+3. **Take attendance** with *Bắt đầu điểm danh*. Recognized students are marked present; change any status from the table, and double-click the *Ghi chú* cell to add a note.
 4. **Export** the result with *Xuất Excel*.
-5. **Students** sign in with their own account to see their attendance history per course.
+5. **Students** sign in with their MSSV account to see their attendance history. The first sign-in links the account to the roster row with the same MSSV, so students imported from Excel can register on their own.
 
 The interface text is in Vietnamese.
 

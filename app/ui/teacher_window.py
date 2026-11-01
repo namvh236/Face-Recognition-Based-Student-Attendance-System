@@ -1,24 +1,24 @@
 import os
 import cv2
 import pandas as pd
-import numpy as np
-import math
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QPushButton, QFrame, QTableWidget, QTableWidgetItem, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                             QPushButton, QFrame, QTableWidget, QTableWidgetItem,
                              QHeaderView, QDateEdit, QLineEdit, QGraphicsDropShadowEffect,
-                             QComboBox, QListView, QCalendarWidget, QToolButton,
-                             QFileDialog, QMessageBox, QDialog, QGridLayout, QAbstractItemView)
-from PyQt5.QtCore import Qt, QDate, QLocale, QTimer
-from PyQt5.QtGui import QColor, QPixmap, QImage, QPainter, QPainterPath, QPen, QFont
+                             QComboBox, QListView, QFileDialog, QMessageBox, QDialog,
+                             QGridLayout, QAbstractItemView)
+from PyQt5.QtCore import Qt, QDate, QTimer
+from PyQt5.QtGui import QColor, QPixmap, QImage, QFont
 from app.config import CAMERA_INDEX, IMG_DIR, STYLES_DIR
 from app.constants import ALL_STATUSES, STATUS_ABSENT, STATUS_PENDING, STATUS_PRESENT
-from PyQt5.QtCore import QRect
-from app.controllers.teacher_controller import (get_teacher_courses, get_attendance_list, 
-                                                update_attendance, add_student, get_teacher_detail, get_teaching_stats,
+from app.controllers.teacher_controller import (get_teacher_courses, get_attendance_list,
+                                                update_attendance, update_note, add_student,
+                                                get_teacher_detail, get_teaching_stats,
                                                 create_or_get_course, import_student_from_excel)
-from PyQt5.QtWidgets import QButtonGroup
+from app.ui.avatar import circular_pixmap, find_teacher_photo
 from app.ui.camera_dialog import CameraDialog
+
+TEACHER_AVATAR_COLORS = ["#2980b9", "#8e44ad", "#27ae60", "#d35400", "#c0392b"]
 
 
 class TeacherProfileDialog(QDialog):
@@ -120,37 +120,10 @@ class TeacherProfileDialog(QDialog):
         layout.addWidget(btn_close)
 
     def load_avatar_circle(self):
-        size = 140
-        final_path = None
-        code = self.t_info.user_code if self.t_info else ""
-
-        paths = [
-            os.path.join(IMG_DIR, "teacher", f"{code}.jpg"),
-            os.path.join(IMG_DIR, "teacher", f"{code}.png"),
-            os.path.join(IMG_DIR, "teacher", f"{code.lower()}.jpg")
-        ]
-        for p in paths:
-            if os.path.exists(p): final_path = p; break
-            
-        if not final_path: final_path = os.path.join(IMG_DIR, "teacher_avatar.png")
-
-        rounded = QPixmap(size, size); rounded.fill(Qt.transparent)
-        painter = QPainter(rounded)
-        painter.setRenderHint(QPainter.Antialiasing, True); painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-        path = QPainterPath(); path.addEllipse(0, 0, size, size); painter.setClipPath(path)
-        
-        if os.path.exists(final_path):
-             painter.drawPixmap(0, 0, QPixmap(final_path).scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
-        else:
-             colors = ["#2980b9", "#8e44ad", "#27ae60", "#d35400", "#c0392b"]
-             idx = len(code) % len(colors)
-             painter.setBrush(QColor(colors[idx])); painter.setPen(Qt.NoPen); painter.drawRect(0, 0, size, size)
-             painter.setPen(QColor("white")); font = QFont("Segoe UI", 40, QFont.Bold); painter.setFont(font)
-             painter.drawText(QRect(0, 0, size, size), Qt.AlignCenter, code[:2])
-
-        painter.setClipping(False); pen = QPen(QColor("#e67e22")); pen.setWidth(4); painter.setPen(pen); painter.setBrush(Qt.NoBrush)
-        painter.drawEllipse(2, 2, size-4, size-4); painter.end()
-        self.ava.setPixmap(rounded)
+        code = (self.t_info.user_code if self.t_info else None) or ""
+        color = TEACHER_AVATAR_COLORS[len(code) % len(TEACHER_AVATAR_COLORS)]
+        self.ava.setPixmap(circular_pixmap(140, find_teacher_photo(code), code[:2], color,
+                                           ring_color="#e67e22", ring_width=4, font_size=40))
 
 # Attendance status combo box
 class AttendanceStatusBox(QComboBox):
@@ -345,7 +318,6 @@ class TeacherWindow(QWidget):
         super().__init__()
         self.teacher_id = teacher_id
         self.current_course_id = None
-        self.all_table_data = [] 
         
         self.setWindowTitle("Hệ Thống Quản Lý Điểm Danh - Giáo Viên")
         self.setMinimumSize(1300, 800)
@@ -535,7 +507,8 @@ class TeacherWindow(QWidget):
         
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)  # only the note column is editable
+        self.table.itemChanged.connect(self.handle_note_changed)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         t_layout.addWidget(self.table)
@@ -598,58 +571,12 @@ class TeacherWindow(QWidget):
     def set_teacher_info(self, fullname, code):
         if fullname: self.lbl_tname.setText(fullname)
         if code: self.lbl_tid.setText(f"ID: {code}")
-        
-        possible_paths = [
-            os.path.join(IMG_DIR, "teacher", f"{code}.jpg"),         
-            os.path.join(IMG_DIR, "teacher", f"{code}.png"),         
-            os.path.join(IMG_DIR, "teacher", f"{code.lower()}.jpg"),
-            os.path.join(IMG_DIR, "teacher", f"{code.lower()}.png"), 
-            os.path.join(IMG_DIR, "teacher", f"{fullname}.jpg")      
-        ]
 
-        final_path = None
-        for p in possible_paths:
-            if os.path.exists(p):
-                final_path = p
-                break
-        
-        if not final_path:
-            final_path = os.path.join(IMG_DIR, "teacher_avatar.png")
-
-        if os.path.exists(final_path):
-            self.avatar.setText("") 
-
-            src_pixmap = QPixmap(final_path)       
-            if not src_pixmap.isNull():
-                size = 80 
-                
-                rounded = QPixmap(size, size)
-                rounded.fill(Qt.transparent)
-                
-                painter = QPainter(rounded)
-                painter.setRenderHint(QPainter.Antialiasing, True) 
-                painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-
-                path = QPainterPath()
-                path.addEllipse(0, 0, size, size)
-                painter.setClipPath(path)
-                painter.drawPixmap(0, 0, src_pixmap.scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
-
-                painter.setClipping(False) 
-
-                pen = QPen(QColor("white"))
-                pen.setWidth(3)
-                painter.setPen(pen)
-                painter.setBrush(Qt.NoBrush) 
-
-                painter.drawEllipse(1, 1, size-2, size-2)
-                
-                painter.end()
-
-                self.avatar.setStyleSheet("background: transparent;") 
-                self.avatar.setPixmap(rounded)
-            else:
-                self.avatar.setText(code[:2])
+        photo = find_teacher_photo(code or "", fullname or "")
+        if photo:
+            self.avatar.setText("")
+            self.avatar.setStyleSheet("background: transparent;")
+            self.avatar.setPixmap(circular_pixmap(80, photo, (code or "")[:2]))
 
     def create_stat_card(self, title, val, color):
         c = QFrame()
@@ -677,20 +604,22 @@ class TeacherWindow(QWidget):
         c.setLayout(l)
         return c
 
-    def load_sidebar_data(self):
+    def load_sidebar_data(self, select_course_id=None):
         if not self.teacher_id: return
         courses = get_teacher_courses(self.teacher_id)
         self.course_btns = []
         for i in reversed(range(self.courses_container.count())): 
             self.courses_container.itemAt(i).widget().setParent(None)
         
-        for c in courses:
+        selected = 0
+        for i, c in enumerate(courses):
             b = QPushButton(c.course_name)
             b.setCheckable(True); b.setObjectName("sidebar_btn")
             b.clicked.connect(lambda _, cid=c.id, cn=c.course_name, cc=c.course_code, cr=c.credits: self.select_course(cid, cn, cc, cr))
             self.courses_container.addWidget(b); self.course_btns.append(b)
+            if c.id == select_course_id: selected = i
             
-        if self.course_btns: self.course_btns[0].click()
+        if self.course_btns: self.course_btns[selected].click()
 
     def select_course(self, cid, cname, ccode, credits):
         self.current_course_id = cid
@@ -709,84 +638,49 @@ class TeacherWindow(QWidget):
         self.sender().setChecked(True)
         self.refresh_table()
 
+    @staticmethod
+    def _cell(text, align=Qt.AlignCenter, editable=False):
+        item = QTableWidgetItem(text)
+        item.setTextAlignment(align)
+        if not editable:
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        return item
+
+    @staticmethod
+    def _split_name(full_name):
+        """Vietnamese name -> (family + middle name, given name)."""
+        parts = full_name.split()
+        return (" ".join(parts[:-1]), parts[-1]) if len(parts) > 1 else ("", full_name.strip())
+
     def refresh_table(self):
         if not self.current_course_id: return
         date = self.date_edit.date().toString("yyyy-MM-dd")
         data = get_attendance_list(self.current_course_id, date)
+        data.sort(key=lambda s: self._split_name(s['name'])[::-1])  # by given name, then family name
 
-        if data: 
-            data.sort(key=lambda x: (x['name'].strip().split()[-1], " ".join(x['name'].strip().split()[:-1])))
-        
-        self.all_table_data = data 
-        
+        self.table.blockSignals(True)  # setItem would otherwise fire handle_note_changed
+        try:
+            self.table.setRowCount(len(data))
+            for r, s in enumerate(data):
+                self.table.setRowHeight(r, 60)
+                family, given = self._split_name(s['name'])
 
-        self.table.setRowCount(len(data))
-        for r, s in enumerate(data):
-            self.table.setRowHeight(r, 60)
-            
-            # Column 0: row number
-            i_stt = QTableWidgetItem(str(r + 1))
-            i_stt.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 0, i_stt)
-            
-            # Column 1: student ID
-            i_mssv = QTableWidgetItem(s['mssv'])
-            i_mssv.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 1, i_mssv)
-            
-            # Split the full name into family+middle name and given name
-            full_name = s['name'].strip()
-            parts = full_name.split()
-            if len(parts) > 1:
-                first_name = parts[-1]              
-                last_name = " ".join(parts[:-1])   
-            else:
-                first_name = full_name
-                last_name = ""
-            # Column 2: family + middle name
-            i_lastname = QTableWidgetItem(last_name)
-            i_lastname.setTextAlignment(Qt.AlignCenter) 
-            self.table.setItem(r, 2, i_lastname)
+                qdate = QDate.fromString(s['dob'], "yyyy-MM-dd")
+                dob_display = qdate.toString("dd-MM-yyyy") if qdate.isValid() else s['dob']
 
-            # Column 3: given name
-            i_firstname = QTableWidgetItem(first_name)
-            i_firstname.setFont(QFont("Segoe UI", 13)) 
-            i_firstname.setTextAlignment(Qt.AlignCenter) 
-            self.table.setItem(r, 3, i_firstname)
+                for col, text in enumerate([str(r + 1), s['mssv'], family, given, dob_display, s['class_name']]):
+                    self.table.setItem(r, col, self._cell(text))
+                self.table.item(r, 3).setFont(QFont("Segoe UI", 13))
 
-            # Column 4: date of birth
-            raw_dob = s.get('dob', '')
-            dob_display = str(raw_dob)
-            if raw_dob and raw_dob != 'None':
-                try: 
-                    qdate = QDate.fromString(str(raw_dob), "yyyy-MM-dd")
-                    if qdate.isValid(): dob_display = qdate.toString("dd-MM-yyyy")
-                except: pass
-            
-            i_dob = QTableWidgetItem(dob_display)
-            i_dob.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 4, i_dob)
+                status_box = AttendanceStatusBox(s['status'])
+                status_box.currentTextChanged.connect(lambda t, mssv=s['mssv']: self.handle_change(mssv, t))
+                self.table.setCellWidget(r, 6, status_box)
 
-            # Column 5: class
-            i_class = QTableWidgetItem(s.get('class_name', ''))
-            i_class.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 5, i_class)
-            
-            # Column 6: status
-            w = AttendanceStatusBox(s['status'])
-            w.currentTextChanged.connect(lambda t, sid=s['id']: self.handle_change(sid, t))
-            self.table.setCellWidget(r, 6, w) 
-            
-            # Column 7: time
-            i_time = QTableWidgetItem(s['time'])
-            i_time.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 7, i_time)
-            
-            # Column 8: note
-            i_note = QTableWidgetItem(s['note'])
-            i_note.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self.table.setItem(r, 8, i_note)
-            
+                self.table.setItem(r, 7, self._cell(s['time']))
+                self.table.setItem(r, 8, self._cell(s['note'], Qt.AlignLeft | Qt.AlignVCenter, editable=True))
+        finally:
+            self.table.blockSignals(False)
+
         self.filter_rows()
         self.refresh_stats_only()
 
@@ -812,16 +706,16 @@ class TeacherWindow(QWidget):
             text_row = " ".join([str(x) for x in row_meta if str(x) != 'nan'])
             if "Tên môn học:" in text_row:
                 parts = text_row.split("Mã môn học:")
-                if len(parts) > 0:
-                    course_name = parts[0].replace("Tên môn học:", "").strip().rstrip(",")
+                course_name = parts[0].replace("Tên môn học:", "").strip().rstrip(",")
                 if len(parts) > 1:
                     course_code = parts[1].strip()
             
             if course_code == "UNKNOWN":
-                 try:
-                     course_name = str(row_meta[0]).split(":")[-1].strip()
-                     course_code = str(row_meta[4]).split(":")[-1].strip()
-                 except: pass
+                try:
+                    course_name = str(row_meta[0]).split(":")[-1].strip()
+                    course_code = str(row_meta[4]).split(":")[-1].strip()
+                except (KeyError, IndexError):
+                    pass
 
             reply = QMessageBox.question(self, "Xác nhận nhập", 
                                        f"Môn: {course_name}\nMã: {course_code}\n\nBạn có muốn nhập?",
@@ -857,7 +751,7 @@ class TeacherWindow(QWidget):
                     if raw_dob and raw_dob.lower() != 'nan':
                         try:
                             dob_val = pd.to_datetime(raw_dob, dayfirst=True).date()
-                        except:
+                        except ValueError:
                             errors.append(f"Dòng {index+6}: {mssv} - Lỗi ngày sinh ({raw_dob})")
                             continue 
 
@@ -879,7 +773,7 @@ class TeacherWindow(QWidget):
             else:
                 QMessageBox.information(self, "Thành công", msg_result)
 
-            self.load_sidebar_data()
+            self.load_sidebar_data(select_course_id=cid)
             
         except Exception as e:
             QMessageBox.critical(self, "Lỗi Import", f"Lỗi nghiêm trọng: {e}")
@@ -903,11 +797,17 @@ class TeacherWindow(QWidget):
 
             self.table.setRowHidden(r, not (match_search and match_status))
 
-    def handle_change(self, sid, status):
+    def handle_change(self, mssv, status):
         if not self.current_course_id: return
         date = self.date_edit.date().toString("yyyy-MM-dd")
-        update_attendance(sid, self.current_course_id, date, status)
+        update_attendance(mssv, self.current_course_id, date, status)
         self.refresh_stats_only()
+
+    def handle_note_changed(self, item):
+        if item.column() != 8 or not self.current_course_id: return
+        mssv = self.table.item(item.row(), 1).text()
+        date = self.date_edit.date().toString("yyyy-MM-dd")
+        update_note(mssv, self.current_course_id, date, item.text())
 
     def refresh_stats_only(self):
         total = self.table.rowCount() 
@@ -937,8 +837,8 @@ class TeacherWindow(QWidget):
         if not self.current_course_id:
             QMessageBox.warning(self, "Cảnh báo", "Vui lòng chọn lớp học trước!")
             return
-        self.dlg = AddStudentDialog(self.current_course_id, self)
-        self.dlg.show()
+        AddStudentDialog(self.current_course_id, self).exec_()
+        self.refresh_table()
 
     def export_excel(self):
         if self.table.rowCount() == 0:
@@ -970,15 +870,7 @@ class TeacherWindow(QWidget):
 
                 # Status comes from the cell widget
                 status_widget = self.table.cellWidget(row, 6)
-                if status_widget:
-                    if hasattr(status_widget, 'currentText'):
-                        status = status_widget.currentText()
-                    elif hasattr(status_widget, 'text'):
-                        status = status_widget.text()
-                    else:
-                        status = ""
-                else:
-                    status = ""
+                status = status_widget.currentText() if status_widget else ""
                 
                 time = get_text(row, 7)
                 note = get_text(row, 8)
@@ -1004,7 +896,6 @@ class TeacherWindow(QWidget):
             with pd.ExcelWriter(path, engine='openpyxl') as writer:
                 df.to_excel(writer, sheet_name='DiemDanh', index=False, startrow=3)
         
-                workbook = writer.book
                 worksheet = writer.sheets['DiemDanh']
 
 
@@ -1027,7 +918,7 @@ class TeacherWindow(QWidget):
 
 
                 header_row = 4 
-                for col_num, column_title in enumerate(df.columns, 1):
+                for col_num in range(1, len(df.columns) + 1):
                     cell = worksheet.cell(row=header_row, column=col_num)
                     cell.font = Font(bold=True, color="FFFFFF")
                     cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
