@@ -48,9 +48,8 @@ A desktop application that takes class attendance from a webcam. A teacher opens
 │   └── constants.py   # Attendance status values
 ├── assets/            # Icons, images and QSS stylesheets
 ├── data/              # Runtime data: SQLite DB, embeddings, face photos (gitignored)
-├── samples/           # Sample class roster for the Excel import
-├── scripts/           # Utilities: seed_data, build_face_cache
-├── docs/images/       # README screenshots
+├── scripts/           # Utility scripts (bulk face-cache builder)
+├── docs/images/       # Diagrams used in this README
 └── main.py            # Application entry point
 ```
 
@@ -81,28 +80,18 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The database is created on first launch. Register a teacher account from the login screen, or load demo data as described below.
+The database is created on first launch. Register a teacher account from the login screen to get started.
 
-### Demo data (optional)
+If you already have photos named `<student_id>.jpg` in `data/raw_faces/`, build their embeddings in one go (from the repository root):
 
 ```bash
-python -m scripts.seed_data          # sample teachers, courses and students
-python -m scripts.build_face_cache   # embeddings from data/raw_faces/<student_id>.jpg
+python -m scripts.build_face_cache
 ```
-
-Seeded logins (development only, passwords are stored in plain text):
-
-| Role | Username | Password |
-| :--- | :--- | :--- |
-| Teacher | `admin`, `gv002` | `123` |
-| Student | the student ID, e.g. `9900000001` | `123` |
-
-Run the scripts from the repository root with `python -m`, not `python scripts/<name>.py`.
 
 ## Usage
 
 1. **Sign in** as a teacher and pick a course in the sidebar.
-2. **Add students** one by one with *Thêm sinh viên* (fill in the form and capture a photo), or import a roster with *Nhập file lớp* (see `samples/dsa_list.xlsx` for the layout). Students imported from Excel have no face yet: open *Thêm sinh viên* with their MSSV to capture it.
+2. **Add students** one by one with *Thêm sinh viên* (fill in the form and capture a photo), or import a roster with *Nhập file lớp*. The roster sheet needs `Tên môn học: <name>, Mã môn học: <code>` in the first row, the table header on row 5, and these columns: no., student ID, family + middle name, given name, date of birth (`dd/mm/yyyy`), class. Students imported from Excel have no face yet: open *Thêm sinh viên* with their MSSV to capture it.
 3. **Take attendance** with *Bắt đầu điểm danh*. Recognized students are marked present; change any status from the table, and double-click the *Ghi chú* cell to add a note.
 4. **Export** the result with *Xuất Excel*.
 5. **Students** sign in with their MSSV account to see their attendance history. The first sign-in links the account to the roster row with the same MSSV, so students imported from Excel can register on their own.
@@ -124,16 +113,6 @@ Everything tunable lives in [`app/config.py`](app/config.py):
 ## Data and Privacy
 
 `data/` holds personal data (face photos, embeddings, the student database) and is excluded from version control. Do not commit it, and obtain consent before collecting face data from real students.
-
-## Screenshots
-
-| Teacher dashboard | Student dashboard |
-| :---: | :---: |
-| ![Teacher window](docs/images/teacher_ui.png) | ![Student window](docs/images/student_ui.png) |
-
-| Attendance in progress |
-| :---: |
-| ![Attendance result](docs/images/attendance_result.png) |
 
 ## Known Limitations
 
