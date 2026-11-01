@@ -1,0 +1,30 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Virtual environments (NEVER commit) ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Runtime data (generated; contains personal data such as face photos) ---
+data/
+
+# --- Face photos (personal data; keep local only) ---
+dataset/
+db_sv/
+assets/img/teacher/
+
+# --- AI assistant notes (local only) ---
+AGENTS.md
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

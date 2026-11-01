@@ -4,10 +4,11 @@ import unicodedata
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
-from app.controllers.teacher_controller import load_known_faces, update_attendance, face_app
+from app.config import CAMERA_INDEX, SIMILARITY_THRESHOLD
+from app.constants import STATUS_PRESENT
+from app.controllers.teacher_controller import load_known_faces, update_attendance
+from app.services.face_service import cosine_similarities, get_face_app
 
-# Ngưỡng nhận diện (Threshold). 
-SIMILARITY_THRESHOLD = 0.5 
 
 class RecognitionThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -28,24 +29,15 @@ class RecognitionThread(QThread):
         s = s.encode('ascii', 'ignore').decode('utf-8')
         return str(s)
 
-    def compute_sim(self, feat1, feat2):
-        """Tính độ tương đồng Cosine giữa 2 vector"""
-        # feat1: vector khuôn mặt webcam
-        # feat2: danh sách vector database
-        feat1 = feat1.ravel()
-        norm1 = np.linalg.norm(feat1)
-        norm2 = np.linalg.norm(feat2, axis=1)
-        sims = np.dot(feat2, feat1) / (norm1 * norm2)
-        return sims
-
     def run(self):
+        face_app = get_face_app()
         print("Đang tải dữ liệu vector khuôn mặt...")
         self.known_embeddings, self.known_mssvs, self.known_names = load_known_faces(self.course_id)
         
         self.known_embeddings = np.array(self.known_embeddings)
         print(f"Đã tải {len(self.known_mssvs)} sinh viên.")
 
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(CAMERA_INDEX)
         
         while self.is_running:
             ret, frame = cap.read()
@@ -62,7 +54,7 @@ class RecognitionThread(QThread):
                 color = (0, 0, 255) 
                 
                 if len(self.known_embeddings) > 0:
-                    sims = self.compute_sim(face.embedding, self.known_embeddings)
+                    sims = cosine_similarities(face.embedding, self.known_embeddings)
                     max_idx = np.argmax(sims)
                     max_sim = sims[max_idx]
 
@@ -145,7 +137,7 @@ class CameraDialog(QDialog):
     def handle_attendance(self, student_id, name):
         self.lbl_status.setText(f"Đã nhận diện: {name}")
         self.lbl_status.setStyleSheet("font-size: 18px; font-weight: bold; color: #27ae60; margin-top: 10px;")
-        update_attendance(student_id, self.course_id, self.date_str, "Có mặt")
+        update_attendance(student_id, self.course_id, self.date_str, STATUS_PRESENT)
 
     def closeEvent(self, event):
         self.thread.stop()

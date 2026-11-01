@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QDate, QRect
 from PyQt5.QtGui import QColor, QPixmap, QPainter, QPainterPath, QPen, QFont
 from app.config import IMG_DIR, STYLES_DIR
+from app.constants import STATUS_ABSENT, STATUS_PRESENT
 from app.controllers.student_controller import (
     get_student_by_user_id, 
     get_student_courses, 
@@ -210,8 +211,8 @@ class StatusBadge(QLabel):
         super().__init__(status)
         self.setAlignment(Qt.AlignCenter)
         bg = "#bdc3c7"
-        if status == "Có mặt": bg = "#e8f5e9"; color="#27ae60"
-        elif status == "Vắng": bg = "#fff5f5"; color="#c62828"
+        if status == STATUS_PRESENT: bg = "#e8f5e9"; color="#27ae60"
+        elif status == STATUS_ABSENT: bg = "#fff5f5"; color="#c62828"
         else: bg = "#f5f6fa"; color="#7f8c8d"
         
         self.setStyleSheet(f"""
@@ -445,7 +446,7 @@ class StudentWindow(QWidget):
         if not self.current_course_id: return
         hist = get_student_attendance_history(self.s_info.id, self.current_course_id)
         
-        tot = len(hist); pre = sum(1 for x in hist if x['status'] == "Có mặt"); ab = sum(1 for x in hist if x['status'] == "Vắng")
+        tot = len(hist); pre = sum(1 for x in hist if x['status'] == STATUS_PRESENT); ab = sum(1 for x in hist if x['status'] == STATUS_ABSENT)
         self.stat_total.findChild(QLabel, "val").setText(str(tot))
         self.stat_present.findChild(QLabel, "val").setText(str(pre))
         self.stat_absent.findChild(QLabel, "val").setText(str(ab))

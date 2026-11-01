@@ -1,13 +1,9 @@
-import sys
+"""Seed dữ liệu mẫu (giảng viên, lớp, sinh viên). Chạy từ thư mục gốc: python -m scripts.seed_data"""
 import os
 import random
 from datetime import date, timedelta
 
-# --- CẤU HÌNH ĐƯỜNG DẪN ---
-current_dir = os.path.dirname(os.path.abspath(__file__)) 
-project_root = os.path.dirname(current_dir)              
-sys.path.append(project_root)
-
+from app.config import RAW_FACES_DIR
 from app.database.connector import init_db, get_session
 from app.database.models import User, Course, Student
 
@@ -18,8 +14,6 @@ TEN = ["Anh", "Bảo", "Châu", "Dũng", "Em", "Giang", "Hà", "Hải", "Hiếu"
 
 CLASSES_ADMIN = ["DCCTCT67A", "DCCTCT67B"]
 
-# Đường dẫn thư mục chứa ảnh raw
-RAW_FACES_DIR = os.path.join(project_root, "data", "raw_faces")
 
 def generate_random_name():
     return f"{random.choice(HO)} {random.choice(DEM)} {random.choice(TEN)}"
@@ -52,8 +46,8 @@ def check_student_avatar(mssv):
         
         if os.path.exists(full_path):
             # Trả về đường dẫn tương đối để lưu vào DB (dễ dùng cho API/Frontend)
-            # Ví dụ: /data/raw_faces/9900000001.jpg
-            return f"/data/raw_faces/{file_name}"
+            # Ví dụ: data/raw_faces/9900000001.jpg
+            return f"data/raw_faces/{file_name}"
             
     return None
 
@@ -76,14 +70,14 @@ def seed():
             "n": "Teacher One", 
             "c": "GV001", 
             "email": "teacher1@example.com", # <--- Thêm mail
-            "avt": "/home/namvh/Downloads/Face-Recognition-Based-Student-Attendance-System/assets/img/teacher/gv001.jpg"
+            "avt": "assets/img/teacher/gv001.jpg"
         },
         {
             "u": "gv002", 
             "n": "Teacher Two", 
             "c": "GV002", 
             "email": "teacher2@example.com", # <--- Thêm mail
-            "avt": "/home/namvh/Downloads/Face-Recognition-Based-Student-Attendance-System/assets/img/teacher/gv002.jpg"
+            "avt": "assets/img/teacher/gv002.jpg"
         }
     ]
 

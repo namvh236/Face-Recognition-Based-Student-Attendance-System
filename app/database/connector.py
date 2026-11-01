@@ -1,38 +1,22 @@
-import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 
+from app.config import DB_URI
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) 
-APP_DIR = os.path.dirname(CURRENT_DIR)                   
-ROOT_DIR = os.path.dirname(APP_DIR)                      
-
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-DB_NAME = "student_management.db"
-
-
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
-
-DB_PATH = os.path.join(DATA_DIR, DB_NAME)
-DB_URI = f"sqlite:///{DB_PATH}"
-
-print(f"Database Path: {DB_PATH}")
-
-
+# check_same_thread=False: RecognitionThread (QThread) ghi DB từ thread khác GUI.
 engine = create_engine(DB_URI, connect_args={"check_same_thread": False}, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-
 Base = declarative_base()
 
-def get_session():
 
+def get_session():
+    """Trả về Session mới. Người gọi PHẢI session.close() ở mọi nhánh thoát."""
     return SessionLocal()
 
+
 def init_db():
-    import app.database.models
-    
+    import app.database.models  # noqa: F401  (đăng ký model vào Base.metadata)
+
     Base.metadata.create_all(engine)
     print("Đã khởi tạo Database thành công!")

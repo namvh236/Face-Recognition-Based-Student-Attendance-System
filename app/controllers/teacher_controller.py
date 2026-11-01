@@ -1,18 +1,10 @@
+from datetime import datetime
+
+from app.config import ENROLLED_FACES_DIR
+from app.constants import STATUS_PENDING, STATUS_PRESENT
 from app.database.connector import get_session
 from app.database.models import Course, Student, Attendance, User
-from datetime import datetime
-import cv2
-import os
-import numpy as np 
-from insightface.app import FaceAnalysis
-import pickle
-
-
-
-face_app = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-face_app.prepare(ctx_id=0, det_size=(640, 640))
-
-CACHE_FILE = "data/face_data.pkl"
+from app.services.face_service import embeddings_from_dir, enroll_face, load_cache, save_cache
 
 
 def get_teacher_detail(teacher_id):
@@ -41,24 +33,6 @@ def get_teaching_stats(teacher_id):
     session.close()
     return stats
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, 'rb') as f:
-                return pickle.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def save_cache(data):
-    with open(CACHE_FILE, 'wb') as f:
-        pickle.dump(data, f)
-
-def get_face_embedding(image):
-    faces = face_app.get(image)
-    if len(faces) > 0:
-        return faces[0].embedding
-    return None
 
 
 def load_known_faces(course_id):
@@ -79,19 +53,9 @@ def load_known_faces(course_id):
     
  
     if not cached_data:
-
-        print("Cache trống, đang tái tạo từ thư mục dataset...")
-        save_dir = "dataset"
-        if os.path.exists(save_dir):
-            for f in os.listdir(save_dir):
-                if f.endswith(('.jpg', '.png')):
-                    mssv_key = os.path.splitext(f)[0]
-                    img = cv2.imread(os.path.join(save_dir, f))
-                    if img is not None:
-                        emb = get_face_embedding(img)
-                        if emb is not None:
-                            cached_data[mssv_key] = emb
-            save_cache(cached_data)
+        print("Cache trống, đang tái tạo từ thư mục ảnh đã đăng ký...")
+        cached_data = embeddings_from_dir(ENROLLED_FACES_DIR)
+        save_cache(cached_data)
 
  
     known_embeddings = []
@@ -129,7 +93,7 @@ def get_attendance_list(course_id, date_str):
             "name": s.name,
             "dob": str(s.dob) if s.dob else "",
             "class_name": s.class_name if hasattr(s, "class_name") else "", 
-            "status": att.status if att else "Chưa điểm danh",
+            "status": att.status if att else STATUS_PENDING,
             "time": att.time if att else "--:--",
             "note": att.note if att else ""
         })
@@ -156,16 +120,16 @@ def update_attendance(mssv, course_id, date_str, status):
     
     if att:
 
-        if att.status != "Có mặt": 
+        if att.status != STATUS_PRESENT: 
             att.status = status
-            if status == "Có mặt" and att.time == "--:--":
+            if status == STATUS_PRESENT and att.time == "--:--":
                  att.time = datetime.now().strftime("%H:%M:%S")
     else:
         new_att = Attendance(
             student_id=student_id, 
             course_id=course_id, 
             date=date_str,
-            time=datetime.now().strftime("%H:%M:%S") if status == "Có mặt" else "--:--", 
+            time=datetime.now().strftime("%H:%M:%S") if status == STATUS_PRESENT else "--:--", 
             status=status
         )
         session.add(new_att)
@@ -178,7 +142,7 @@ def add_student(mssv, name, dob, class_name, course_id, frame):
     """
     Thêm sinh viên mới:
     1. Lưu vào DB.
-    2. Lưu ảnh vào folder dataset (để backup).
+    2. Lưu ảnh vào ENROLLED_FACES_DIR (để backup).
     3. Tính vector và lưu vào cache (để dùng ngay).
     """
     session = get_session()
@@ -192,18 +156,7 @@ def add_student(mssv, name, dob, class_name, course_id, frame):
         student_id = new_student.id
         session.commit()
 
-        save_dir = "dataset"
-        if not os.path.exists(save_dir): os.makedirs(save_dir)
-        
-        img_path = os.path.join(save_dir, f"{mssv}.jpg")
-        cv2.imwrite(img_path, frame)
-        
-        # TÍNH VECTOR VÀ LƯU CACHE
-        embedding = get_face_embedding(frame)
-        if embedding is not None:
-            cache = load_cache()
-            cache[mssv] = embedding 
-            save_cache(cache)
+        enroll_face(mssv, frame)
             
         session.close()
         return True, "Thêm sinh viên thành công!"

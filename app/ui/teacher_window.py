@@ -11,13 +11,14 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QFileDialog, QMessageBox, QDialog, QGridLayout, QAbstractItemView)
 from PyQt5.QtCore import Qt, QDate, QLocale, QTimer
 from PyQt5.QtGui import QColor, QPixmap, QImage, QPainter, QPainterPath, QPen, QFont
-from app.config import IMG_DIR, STYLES_DIR
+from app.config import CAMERA_INDEX, IMG_DIR, STYLES_DIR
+from app.constants import ALL_STATUSES, STATUS_ABSENT, STATUS_PENDING, STATUS_PRESENT
 from PyQt5.QtCore import QRect
 from app.controllers.teacher_controller import (get_teacher_courses, get_attendance_list, 
                                                 update_attendance, add_student, get_teacher_detail, get_teaching_stats,
                                                 create_or_get_course, import_student_from_excel)
 from PyQt5.QtWidgets import QButtonGroup
-from app.core.camera_dialog import CameraDialog
+from app.ui.camera_dialog import CameraDialog
 
 
 class TeacherProfileDialog(QDialog):
@@ -155,10 +156,10 @@ class TeacherProfileDialog(QDialog):
 # CLASS 1: BADGE TRẠNG THÁI 
 # =================================================================================
 class AttendanceStatusBox(QComboBox):
-    def __init__(self, current_status="Chưa điểm danh"):
+    def __init__(self, current_status=STATUS_PENDING):
         super().__init__()
         self.setCursor(Qt.PointingHandCursor)
-        self.addItems(["Có mặt", "Vắng", "Chưa điểm danh"])
+        self.addItems(list(ALL_STATUSES))
         self.setCurrentText(current_status)
         self.setView(QListView(self)) 
         self.update_style()
@@ -166,9 +167,9 @@ class AttendanceStatusBox(QComboBox):
 
     def update_style(self):
         text = self.currentText()
-        if text == "Có mặt": 
+        if text == STATUS_PRESENT:
             bg_color = "#e6fffa"; text_color = "#00b894"; border_color = "#00b894"
-        elif text == "Vắng": 
+        elif text == STATUS_ABSENT:
             bg_color = "#fff5f5"; text_color = "#d63031"; border_color = "#d63031"
         else: 
             bg_color = "#f1f2f6"; text_color = "#747d8c"; border_color = "#ced6e0"
@@ -281,7 +282,7 @@ class AddStudentDialog(QDialog):
         layout.addLayout(right_layout, 6)
 
     def start_camera(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(CAMERA_INDEX)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
@@ -505,7 +506,7 @@ class TeacherWindow(QWidget):
 
         self.cbb_filter = QComboBox()
         self.cbb_filter.setObjectName("filter_box")
-        self.cbb_filter.addItems(["Tất cả", "Có mặt", "Vắng", "Chưa điểm danh"])
+        self.cbb_filter.addItems(["Tất cả", *ALL_STATUSES])
         self.cbb_filter.currentTextChanged.connect(self.filter_rows)
 
         toolbar_layout.addWidget(self.txt_search)
@@ -923,8 +924,8 @@ class TeacherWindow(QWidget):
             w = self.table.cellWidget(r, 6)
             if w:
                 st = w.currentText()
-                if st == "Có mặt": present += 1
-                elif st == "Vắng": absent += 1
+                if st == STATUS_PRESENT: present += 1
+                elif st == STATUS_ABSENT: absent += 1
             
         self.card_total.findChild(QLabel, "val").setText(str(total))
         self.card_present.findChild(QLabel, "val").setText(str(present))
