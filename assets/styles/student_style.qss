@@ -1,4 +1,4 @@
-/* --- TỔNG THỂ --- */
+/* --- BASE --- */
 QWidget {
     font-family: "Segoe UI", sans-serif;
     font-size: 14px;
@@ -10,7 +10,7 @@ QFrame#sidebar {
     background-color: white;
     border-right: 1px solid #eaeff5;
 }
-/* Profile nhỏ gọn hơn */
+/* Compact profile */
 QLabel#profile_name { 
     color: #2c3e50; 
     font-size: 20px; 
@@ -25,7 +25,7 @@ QLabel#sidebar_title {
     text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px;
 }
 
-/* Ô TÌM KIẾM (MỚI) */
+/* Course search box */
 QLineEdit#course_search {
     border: 1px solid #dfe6e9;
     border-radius: 6px;
@@ -38,7 +38,7 @@ QLineEdit#course_search:focus {
     background-color: white;
 }
 
-/* Nút chọn lớp */
+/* Course button */
 QPushButton#sidebar_btn {
     background-color: transparent;
     color: #2c3e50;
@@ -53,7 +53,7 @@ QPushButton#sidebar_btn:checked {
     background-color: #e3f2fd; color: #1976d2; font-weight: 600;
 }
 
-/* Nút Đăng xuất */
+/* Logout button */
 QPushButton#btn_logout {
     background-color: white; color: #e74c3c;
     border: 1px solid #fadbd8; border-radius: 15px;
@@ -62,7 +62,7 @@ QPushButton#btn_logout {
 QPushButton#btn_logout:hover { background-color: #e74c3c; color: white; }
 
 
-/* --- HEADER INFO --- */
+/* --- HEADER --- */
 QLabel#school_name { 
     color: #7f8c8d; 
     font-size: 17px; 
@@ -78,7 +78,7 @@ QLabel#header_title {
     padding-top: 5px; 
 }
 
-/* --- TABLE AREA --- */
+/* --- TABLE --- */
 QFrame#table_card {
     background-color: white; border-radius: 10px; border: 1px solid #ecf0f1;
 }
@@ -94,7 +94,7 @@ QHeaderView::section {
 }
 QTableWidget::item { padding: 5px; border-bottom: 1px solid #f8f9fa; }
 
-/* Nút Báo cáo */
+/* Report button */
 QPushButton#btn_report {
     background-color: #fff3e0;      
     color: #ff2400;                 

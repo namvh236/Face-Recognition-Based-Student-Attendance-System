@@ -13,9 +13,7 @@ from app.controllers.student_controller import (
     get_student_course_details 
 )
 
-# =================================================================================
-# CLASS 1: DIALOG HỒ SƠ SINH VIÊN (POPUP) - ĐÃ CẬP NHẬT GIAO DIỆN
-# =================================================================================
+# Student profile dialog
 class StudentProfileDialog(QDialog):
     def __init__(self, student_info, parent=None):
         super().__init__(parent)
@@ -83,17 +81,14 @@ class StudentProfileDialog(QDialog):
         else:
              email_str = f"{self.s_info.mssv}@humg.edu.vn"
 
-        # Hàng 0: Ngày sinh
         grid.addWidget(QLabel("Ngày sinh:"), 0, 0)
         lbl_dob_val = QLabel(dob_str); lbl_dob_val.setStyleSheet(style_val)
         grid.addWidget(lbl_dob_val, 0, 1)
 
-        # Hàng 1: Email
         grid.addWidget(QLabel("Email:"), 1, 0)
         lbl_email_val = QLabel(email_str); lbl_email_val.setStyleSheet(style_val)
         grid.addWidget(lbl_email_val, 1, 1)
         
-        # Hàng 2: Lớp
         grid.addWidget(QLabel("Lớp:"), 2, 0)
         lbl_class_val = QLabel(self.s_info.class_name if self.s_info.class_name else "---"); lbl_class_val.setStyleSheet(style_val)
         grid.addWidget(lbl_class_val, 2, 1)
@@ -129,9 +124,6 @@ class StudentProfileDialog(QDialog):
         """)
         
         h = self.table.horizontalHeader()
-        # h.setSectionResizeMode(0, QHeaderView.Fixed); self.table.setColumnWidth(0, 315)
-        # h.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        # h.setSectionResizeMode(2, QHeaderView.Fixed); self.table.setColumnWidth(2, 150)
         h.setSectionResizeMode(0, QHeaderView.Stretch)
         h.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(2, QHeaderView.Stretch)
@@ -139,7 +131,7 @@ class StudentProfileDialog(QDialog):
         self.table.setRowCount(len(self.course_data))
         for r, data in enumerate(self.course_data):
             it_course = QTableWidgetItem(data['course_name'])
-            it_course.setTextAlignment(Qt.AlignCenter) # Canh trái + Giữa dọc
+            it_course.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 0, it_course)
             it_teacher = QTableWidgetItem(data['teacher_name'])
             it_teacher.setTextAlignment(Qt.AlignCenter)
@@ -203,9 +195,7 @@ class StudentProfileDialog(QDialog):
         self.ava.setPixmap(rounded)
 
 
-# =================================================================================
-# CLASS 2: HELPER BADGE TRẠNG THÁI
-# =================================================================================
+# Status badge label
 class StatusBadge(QLabel):
     def __init__(self, status):
         super().__init__(status)
@@ -221,9 +211,7 @@ class StatusBadge(QLabel):
             padding: 4px 8px; font-family: 'Segoe UI'; font-size: 13px;
         """)
 
-# =================================================================================
-# CLASS 3: CỬA SỔ CHÍNH (STUDENT WINDOW)
-# =================================================================================
+# Main student window
 class StudentWindow(QWidget):
     def __init__(self, user_id=None):
         super().__init__()

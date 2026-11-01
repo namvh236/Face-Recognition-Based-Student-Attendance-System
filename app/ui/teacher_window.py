@@ -152,9 +152,7 @@ class TeacherProfileDialog(QDialog):
         painter.drawEllipse(2, 2, size-4, size-4); painter.end()
         self.ava.setPixmap(rounded)
 
-# =================================================================================
-# CLASS 1: BADGE TRẠNG THÁI 
-# =================================================================================
+# Attendance status combo box
 class AttendanceStatusBox(QComboBox):
     def __init__(self, current_status=STATUS_PENDING):
         super().__init__()
@@ -194,9 +192,7 @@ class AttendanceStatusBox(QComboBox):
             }}
         """)
 
-# =================================================================================
-# CLASS 2: DIALOG THÊM SINH VIÊN (CÓ CAMERA)
-# =================================================================================
+# Add-student dialog (with camera preview)
 class AddStudentDialog(QDialog):
     def __init__(self, course_id, parent=None):
         super().__init__(parent)
@@ -343,9 +339,7 @@ class AddStudentDialog(QDialog):
         event.accept()
 
 
-# =================================================================================
-# CLASS 3: CỬA SỔ CHÍNH GIÁO VIÊN
-# =================================================================================
+# Main teacher window
 class TeacherWindow(QWidget):
     def __init__(self, teacher_id=None):
         super().__init__()
@@ -529,15 +523,15 @@ class TeacherWindow(QWidget):
         
         header = self.table.horizontalHeader()
 
-        header.setSectionResizeMode(0, QHeaderView.Fixed); self.table.setColumnWidth(0, 70)   # STT
-        header.setSectionResizeMode(1, QHeaderView.Fixed); self.table.setColumnWidth(1, 150)  # MSSV 
-        header.setSectionResizeMode(2, QHeaderView.Stretch)                                   # Họ đệm 
-        header.setSectionResizeMode(3, QHeaderView.Fixed); self.table.setColumnWidth(3, 150)  # Tên 
-        header.setSectionResizeMode(4, QHeaderView.Fixed); self.table.setColumnWidth(4, 150)  # Ngày sinh
-        header.setSectionResizeMode(5, QHeaderView.Fixed); self.table.setColumnWidth(5, 150)  # Lớp
-        header.setSectionResizeMode(6, QHeaderView.Fixed); self.table.setColumnWidth(6, 170)  # Trạng thái
-        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)                          # Thời gian
-        header.setSectionResizeMode(8, QHeaderView.Stretch)                                   # Ghi chú
+        header.setSectionResizeMode(0, QHeaderView.Fixed); self.table.setColumnWidth(0, 70)   # No.
+        header.setSectionResizeMode(1, QHeaderView.Fixed); self.table.setColumnWidth(1, 150)  # Student ID
+        header.setSectionResizeMode(2, QHeaderView.Stretch)                                   # Family + middle name
+        header.setSectionResizeMode(3, QHeaderView.Fixed); self.table.setColumnWidth(3, 150)  # Given name
+        header.setSectionResizeMode(4, QHeaderView.Fixed); self.table.setColumnWidth(4, 150)  # Date of birth
+        header.setSectionResizeMode(5, QHeaderView.Fixed); self.table.setColumnWidth(5, 150)  # Class
+        header.setSectionResizeMode(6, QHeaderView.Fixed); self.table.setColumnWidth(6, 170)  # Status
+        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)                          # Time
+        header.setSectionResizeMode(8, QHeaderView.Stretch)                                   # Note
         
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -555,7 +549,6 @@ class TeacherWindow(QWidget):
         main_layout.addWidget(self.sidebar)
         main_layout.addWidget(self.content_area)
 
-    # --- LOGIC FUNCTIONS ---
 
     def setup_profile_section(self, layout):
         widget = QWidget()
@@ -731,17 +724,17 @@ class TeacherWindow(QWidget):
         for r, s in enumerate(data):
             self.table.setRowHeight(r, 60)
             
-            # Cột 0: STT
+            # Column 0: row number
             i_stt = QTableWidgetItem(str(r + 1))
             i_stt.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 0, i_stt)
             
-            # Cột 1: MSSV 
+            # Column 1: student ID
             i_mssv = QTableWidgetItem(s['mssv'])
             i_mssv.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 1, i_mssv)
             
-            # [XỬ LÝ TÁCH TÊN]
+            # Split the full name into family+middle name and given name
             full_name = s['name'].strip()
             parts = full_name.split()
             if len(parts) > 1:
@@ -750,18 +743,18 @@ class TeacherWindow(QWidget):
             else:
                 first_name = full_name
                 last_name = ""
-            # Cột 2: Họ đệm
+            # Column 2: family + middle name
             i_lastname = QTableWidgetItem(last_name)
             i_lastname.setTextAlignment(Qt.AlignCenter) 
             self.table.setItem(r, 2, i_lastname)
 
-            # Cột 3: Tên (In đậm cho nổi bật)
+            # Column 3: given name
             i_firstname = QTableWidgetItem(first_name)
             i_firstname.setFont(QFont("Segoe UI", 13)) 
             i_firstname.setTextAlignment(Qt.AlignCenter) 
             self.table.setItem(r, 3, i_firstname)
 
-            # Cột 4: Ngày sinh
+            # Column 4: date of birth
             raw_dob = s.get('dob', '')
             dob_display = str(raw_dob)
             if raw_dob and raw_dob != 'None':
@@ -774,22 +767,22 @@ class TeacherWindow(QWidget):
             i_dob.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 4, i_dob)
 
-            # Cột 5: Lớp
+            # Column 5: class
             i_class = QTableWidgetItem(s.get('class_name', ''))
             i_class.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 5, i_class)
             
-            # Cột 6: Trạng thái
+            # Column 6: status
             w = AttendanceStatusBox(s['status'])
             w.currentTextChanged.connect(lambda t, sid=s['id']: self.handle_change(sid, t))
             self.table.setCellWidget(r, 6, w) 
             
-            # Cột 7: Thời gian
+            # Column 7: time
             i_time = QTableWidgetItem(s['time'])
             i_time.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, 7, i_time)
             
-            # Cột 8: Ghi chú
+            # Column 8: note
             i_note = QTableWidgetItem(s['note'])
             i_note.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.table.setItem(r, 8, i_note)
@@ -815,7 +808,7 @@ class TeacherWindow(QWidget):
             course_name = "Môn học mới"
             course_code = "UNKNOWN"
             
-            # Logic tìm tên môn
+            # Extract the course name from the metadata row
             text_row = " ".join([str(x) for x in row_meta if str(x) != 'nan'])
             if "Tên môn học:" in text_row:
                 parts = text_row.split("Mã môn học:")
@@ -971,11 +964,11 @@ class TeacherWindow(QWidget):
                 stt = get_text(row, 0)
                 mssv = get_text(row, 1)
                 ho_dem = get_text(row, 2)
-                ten = get_text(row, 3) # Tên
+                ten = get_text(row, 3)
                 dob = get_text(row, 4)
                 class_name = get_text(row, 5)
 
-                # Lấy trạng thái
+                # Status comes from the cell widget
                 status_widget = self.table.cellWidget(row, 6)
                 if status_widget:
                     if hasattr(status_widget, 'currentText'):
@@ -1047,7 +1040,7 @@ class TeacherWindow(QWidget):
                     for col in range(1, 10):
                         cell = worksheet.cell(row=row, column=col)
                         cell.border = thin_border
-                        # Căn giữa các cột ngắn, căn trái cột Tên/Ghi chú
+                        # Center short columns; left-align the rest
                         if col in [1, 2, 5, 7, 8]: 
                             cell.alignment = center_align
                         else:

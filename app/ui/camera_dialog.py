@@ -31,11 +31,11 @@ class RecognitionThread(QThread):
 
     def run(self):
         face_app = get_face_app()
-        print("Đang tải dữ liệu vector khuôn mặt...")
+        print("Loading face embeddings...")
         self.known_embeddings, self.known_mssvs, self.known_names = load_known_faces(self.course_id)
         
         self.known_embeddings = np.array(self.known_embeddings)
-        print(f"Đã tải {len(self.known_mssvs)} sinh viên.")
+        print(f"Loaded {len(self.known_mssvs)} students.")
 
         cap = cv2.VideoCapture(CAMERA_INDEX)
         

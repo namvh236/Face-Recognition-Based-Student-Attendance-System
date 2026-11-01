@@ -1,6 +1,6 @@
-"""Dựng lại data/face_data.pkl từ ảnh trong data/raw_faces/<mssv>.<jpg|png>.
+"""Rebuild data/face_data.pkl from photos in data/raw_faces/<mssv>.<jpg|png>.
 
-Chạy từ thư mục gốc: python -m scripts.build_face_cache
+Run from the repo root: python -m scripts.build_face_cache
 """
 import os
 
@@ -10,19 +10,19 @@ from app.services.face_service import embeddings_from_dir, save_cache
 
 def main():
     if not os.path.isdir(RAW_FACES_DIR):
-        print(f"Lỗi: Không tìm thấy thư mục '{RAW_FACES_DIR}'!")
+        print(f"Error: directory not found: '{RAW_FACES_DIR}'")
         return
 
-    print("Đang khởi tạo model AI (InsightFace) và xử lý ảnh...")
+    print("Loading the InsightFace model and processing images...")
     face_data = embeddings_from_dir(RAW_FACES_DIR, report=print)
 
     if not face_data:
-        print("Không có dữ liệu nào được lưu.")
+        print("No embeddings were saved.")
         return
 
     save_cache(face_data)
     print("------------------------------------------------")
-    print(f"Đã lưu {len(face_data)} sinh viên vào '{FACE_CACHE_FILE}'. Có thể điểm danh ngay.")
+    print(f"Saved {len(face_data)} students to '{FACE_CACHE_FILE}'.")
 
 
 if __name__ == "__main__":

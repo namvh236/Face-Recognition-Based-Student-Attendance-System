@@ -1,4 +1,4 @@
-/* --- TỔNG THỂ --- */
+/* --- BASE --- */
 QWidget {
     background-color: #eff2f7; 
     font-family: "Segoe UI", "Arial", sans-serif;
@@ -8,7 +8,7 @@ QLabel {
     background-color: transparent; 
 }
 
-/* --- CARD CONTAINER --- */
+/* --- CARD --- */
 QFrame#register_card {
     background-color: #ffffff;
     border-radius: 20px;
@@ -47,7 +47,7 @@ QLineEdit:focus {
     background-color: #ffffff;
 }
 
-/* --- NÚT ĐĂNG KÝ (Primary) --- */
+/* --- REGISTER BUTTON (primary) --- */
 QPushButton#btn_register {
     background-color: #27ae60;
     color: white;
@@ -66,7 +66,7 @@ QPushButton#btn_register:pressed {
     padding-top: 2px;
 }
 
-/* --- NÚT QUAY LẠI (Link style) --- */
+/* --- BACK BUTTON (link style) --- */
 QPushButton#btn_back {
     background-color: transparent;
     color: #7f8c8d;

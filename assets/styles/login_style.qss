@@ -1,4 +1,4 @@
-/* --- TỔNG THỂ --- */
+/* --- BASE --- */
 QWidget {
     background-color: #eff2f7;
     font-family: "Segoe UI", "Roboto", "Arial", sans-serif;
@@ -8,7 +8,7 @@ QLabel {
     background-color: transparent; 
 }
 
-/* --- CARD CONTAINER --- */
+/* --- CARD --- */
 QFrame#login_card {
     background-color: #ffffff;
     border-radius: 20px; 
@@ -17,7 +17,7 @@ QFrame#login_card {
     border: 1px solid #ffffff;
 }
 
-/* --- TEXT STYLES --- */
+/* --- TEXT --- */
 QLabel#title {
     font-size: 22px;
     font-weight: 800; 
@@ -27,7 +27,6 @@ QLabel#title {
 
 QLabel#subtitle {
     font-size: 13px;
-    /* color: #95a5a6; */
     margin-bottom: 5px;
 }
 
@@ -53,7 +52,7 @@ QLineEdit:focus {
     background-color: #ffffff;
 }
 
-/* --- PRIMARY BUTTON (Đăng nhập) --- */
+/* --- PRIMARY BUTTON (login) --- */
 QPushButton#btn_login {
     background-color: #2980b9; 
     color: white;
@@ -73,7 +72,7 @@ QPushButton#btn_login:pressed {
     padding-top: 2px; 
 }
 
-/* --- SECONDARY BUTTON (Đăng ký) --- */
+/* --- SECONDARY BUTTON (register) --- */
 QPushButton#btn_register {
     background-color: transparent;
     color: #7f8c8d;
@@ -105,7 +104,7 @@ QLineEdit:focus {
     background-color: #ffffff;
 }
 
-/* --- RADIO BUTTON (Chọn vai trò) --- */
+/* --- RADIO BUTTON (role) --- */
 QRadioButton {
     font-size: 14px;
     color: #34495e;
@@ -113,7 +112,7 @@ QRadioButton {
     padding: 5px;
 }
 
-/* Hình tròn mặc định (Chưa chọn) */
+/* Default (unchecked) indicator */
 QRadioButton::indicator {
     width: 16px;
     height: 16px;
@@ -122,12 +121,12 @@ QRadioButton::indicator {
     background-color: white; 
 }
 
-/* Hiệu ứng khi di chuột vào (Hover) */
+/* Hover */
 QRadioButton::indicator:hover {
     border: 2px solid #3498db; 
 }
 
-/* Trạng thái ĐÃ CHỌN (Checked) */
+/* Checked */
 QRadioButton::indicator:checked {
     background-color: #2980b9; 
     border: 4px solid white;  

@@ -1,6 +1,6 @@
-"""Nhận diện khuôn mặt: model InsightFace (lazy), cache embedding, so khớp cosine.
+"""Face recognition: lazy InsightFace model, embedding cache, cosine matching.
 
-Cache `data/face_data.pkl` là dict phẳng `{mssv: embedding}` (embedding thô, chưa chuẩn hoá).
+The cache (`data/face_data.pkl`) is a flat `{mssv: embedding}` dict of raw, unnormalized embeddings.
 """
 import os
 import pickle
@@ -23,7 +23,7 @@ _face_app_lock = threading.Lock()
 
 
 def get_face_app():
-    """Khởi tạo InsightFace ở lần gọi đầu (tải model rất nặng, không làm lúc import)."""
+    """Create the InsightFace app on first use (model load is slow, so never at import time)."""
     global _face_app
     if _face_app is None:
         with _face_app_lock:
@@ -40,7 +40,7 @@ def get_face_app():
 
 
 def get_face_embedding(image):
-    """Embedding của khuôn mặt đầu tiên trong ảnh BGR, hoặc None nếu không có mặt nào."""
+    """Embedding of the first face in a BGR image, or None if no face is found."""
     faces = get_face_app().get(image)
     return faces[0].embedding if faces else None
 
@@ -62,9 +62,9 @@ def save_cache(data):
 
 
 def embeddings_from_dir(directory, report=None):
-    """Quét thư mục ảnh `<mssv>.<ext>` -> `{mssv: embedding}`. Ảnh lỗi/không có mặt bị bỏ qua.
+    """Scan a directory of `<mssv>.<ext>` images -> `{mssv: embedding}`.
 
-    `report(msg)` (tuỳ chọn) nhận cảnh báo cho từng ảnh bị bỏ qua.
+    Unreadable images and images without a face are skipped; `report(msg)`, if given, is told why.
     """
     result = {}
     if not os.path.isdir(directory):
@@ -87,7 +87,7 @@ def embeddings_from_dir(directory, report=None):
 
 
 def enroll_face(mssv, frame):
-    """Lưu ảnh backup vào ENROLLED_FACES_DIR và cập nhật cache ngay. True nếu có mặt trong ảnh."""
+    """Save the photo to ENROLLED_FACES_DIR and update the cache. Return True if a face was found."""
     os.makedirs(ENROLLED_FACES_DIR, exist_ok=True)
     cv2.imwrite(os.path.join(ENROLLED_FACES_DIR, f"{mssv}.jpg"), frame)
 
@@ -101,7 +101,7 @@ def enroll_face(mssv, frame):
 
 
 def cosine_similarities(embedding, known_embeddings):
-    """Cosine giữa 1 vector và ma trận (N, D) -> mảng (N,)."""
+    """Cosine similarity between one vector and an (N, D) matrix -> array of shape (N,)."""
     embedding = embedding.ravel()
     known = np.asarray(known_embeddings)
     return known @ embedding / (np.linalg.norm(embedding) * np.linalg.norm(known, axis=1))

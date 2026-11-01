@@ -64,7 +64,6 @@ class RegisterWindow(QWidget):
         role_layout.addWidget(self.rb_student)
         role_layout.addWidget(self.rb_teacher)
         role_layout.addStretch()
-        # ---------------------------------------
 
         self.btn_reg = QPushButton("ĐĂNG KÝ NGAY"); self.btn_reg.setObjectName("btn_register"); self.btn_reg.setCursor(Qt.PointingHandCursor); self.btn_reg.setFixedHeight(50)
         self.btn_back.setObjectName("btn_back"); self.btn_back.setCursor(Qt.PointingHandCursor)

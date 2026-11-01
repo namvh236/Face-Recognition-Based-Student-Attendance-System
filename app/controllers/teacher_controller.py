@@ -8,7 +8,7 @@ from app.services.face_service import embeddings_from_dir, enroll_face, load_cac
 
 
 def get_teacher_detail(teacher_id):
-    """Lấy thông tin chi tiết của giảng viên (SĐT, Email, ...)"""
+    """Return the teacher's User row (phone, email, ...)."""
     session = get_session()
     teacher = session.query(User).filter_by(id=teacher_id).first()
     if teacher:
@@ -17,7 +17,7 @@ def get_teacher_detail(teacher_id):
     return teacher
 
 def get_teaching_stats(teacher_id):
-    """Lấy danh sách lớp đang dạy kèm sĩ số sinh viên"""
+    """List the teacher's courses with student counts."""
     session = get_session()
     courses = session.query(Course).filter_by(teacher_id=teacher_id).all()
     
@@ -37,10 +37,10 @@ def get_teaching_stats(teacher_id):
 
 def load_known_faces(course_id):
     """
-    Kết hợp dữ liệu từ DB và Cache để trả về dữ liệu nhận diện.
-    OUTPUT: trả về (embeddings, list_mssv, list_names)
+    Merge DB students with the face cache for one course.
+    Returns (embeddings, mssv_list, name_list).
     """
-    print(f"Đang tải dữ liệu cho Course ID: {course_id}...")
+    print(f"Loading face data for course {course_id}...")
 
     session = get_session()
     students_in_course = session.query(Student).filter_by(course_id=course_id).all()
@@ -53,7 +53,7 @@ def load_known_faces(course_id):
     
  
     if not cached_data:
-        print("Cache trống, đang tái tạo từ thư mục ảnh đã đăng ký...")
+        print("Face cache is empty, rebuilding from enrolled photos...")
         cached_data = embeddings_from_dir(ENROLLED_FACES_DIR)
         save_cache(cached_data)
 
@@ -70,7 +70,7 @@ def load_known_faces(course_id):
             known_mssvs.append(mssv)  
             known_names.append(name)
 
-    print(f"Đã load {len(known_mssvs)} khuôn mặt cho lớp này.")
+    print(f"Loaded {len(known_mssvs)} faces for this course.")
     return known_embeddings, known_mssvs, known_names
 
 def get_teacher_courses(teacher_id):
@@ -102,15 +102,13 @@ def get_attendance_list(course_id, date_str):
     return result
 
 def update_attendance(mssv, course_id, date_str, status):
-    """
-    Nhận MSSV -> Tìm Student ID -> Cập nhật điểm danh
-    """
+    """Find the student by MSSV in the course, then upsert the attendance row."""
     session = get_session()
 
     student = session.query(Student).filter_by(mssv=mssv, course_id=course_id).first()
     
     if not student:
-        print(f"Không tìm thấy sinh viên có MSSV {mssv} trong lớp {course_id}")
+        print(f"Student {mssv} not found in course {course_id}")
         session.close()
         return
 
@@ -140,10 +138,10 @@ def update_attendance(mssv, course_id, date_str, status):
 
 def add_student(mssv, name, dob, class_name, course_id, frame):
     """
-    Thêm sinh viên mới:
-    1. Lưu vào DB.
-    2. Lưu ảnh vào ENROLLED_FACES_DIR (để backup).
-    3. Tính vector và lưu vào cache (để dùng ngay).
+    Add a student:
+    1. Insert the DB row.
+    2. Save the photo to ENROLLED_FACES_DIR.
+    3. Compute the embedding and update the cache so recognition works immediately.
     """
     session = get_session()
 

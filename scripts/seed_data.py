@@ -1,4 +1,4 @@
-"""Seed dữ liệu mẫu (giảng viên, lớp, sinh viên). Chạy từ thư mục gốc: python -m scripts.seed_data"""
+"""Seed sample teachers, courses and students. Run from the repo root: python -m scripts.seed_data"""
 import os
 import random
 from datetime import date, timedelta
@@ -7,7 +7,7 @@ from app.config import RAW_FACES_DIR
 from app.database.connector import init_db, get_session
 from app.database.models import User, Course, Student
 
-# --- DỮ LIỆU MẪU ---
+# Sample data
 HO = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý"]
 DEM = ["Văn", "Thị", "Minh", "Đức", "Ngọc", "Xuân", "Thanh", "Hữu", "Gia", "Khánh", "Tuấn", "Hoài", "Quốc", "Mạnh", "Thùy", "Phương"]
 TEN = ["Anh", "Bảo", "Châu", "Dũng", "Em", "Giang", "Hà", "Hải", "Hiếu", "Hòa", "Hùng", "Huy", "Khánh", "Khoa", "Lâm", "Linh", "Long", "Minh", "Nam", "Nga", "Nhi", "Phát", "Phúc", "Quân", "Quỳnh", "Sơn", "Thảo", "Thắng", "Thịnh", "Trang", "Trung", "Tú", "Tùng", "Việt", "Vinh", "Uyên", "Yến"]
@@ -24,20 +24,16 @@ def get_random_dob_2004():
     return start_date + timedelta(days=random.randrange((end_date - start_date).days))
 
 def generate_phone():
-    """Sinh SĐT ngẫu nhiên cho Giảng viên"""
+    """Random Vietnamese mobile number for a teacher."""
     prefixes = ["090", "091", "098", "097", "089"]
     suffix = "".join([str(random.randint(0, 9)) for _ in range(7)])
     return f"{random.choice(prefixes)}{suffix}"
 
 def check_student_avatar(mssv):
-    """
-    Kiểm tra xem sinh viên có ảnh trong data/raw_faces hay không.
-    Ưu tiên .jpg rồi đến .png
-    """
+    """Return the repo-relative path of data/raw_faces/<mssv>.(jpg|png|jpeg) if it exists, else None."""
     if not os.path.exists(RAW_FACES_DIR):
         return None
         
-    # Các đuôi file ảnh chấp nhận
     extensions = [".jpg", ".png", ".jpeg"]
     
     for ext in extensions:
@@ -45,38 +41,37 @@ def check_student_avatar(mssv):
         full_path = os.path.join(RAW_FACES_DIR, file_name)
         
         if os.path.exists(full_path):
-            # Trả về đường dẫn tương đối để lưu vào DB (dễ dùng cho API/Frontend)
-            # Ví dụ: data/raw_faces/9900000001.jpg
+            # Stored relative to the repo root, e.g. data/raw_faces/9900000001.jpg
             return f"data/raw_faces/{file_name}"
             
     return None
 
 def seed():
-    print("🔄 Đang khởi tạo Database...")
+    print("Initializing database...")
     
-    # Tạo thư mục raw_faces nếu chưa có (để tránh lỗi code, dù chưa có ảnh)
+    # Ensure raw_faces exists so the avatar lookup below cannot fail
     if not os.path.exists(RAW_FACES_DIR):
         os.makedirs(RAW_FACES_DIR)
-        print(f"⚠️ Đã tạo thư mục trống: {RAW_FACES_DIR}. Hãy bỏ ảnh vào đây nếu muốn import.")
+        print(f"Created empty directory {RAW_FACES_DIR}. Put <mssv>.jpg photos there to link avatars.")
 
     init_db() 
     session = get_session()
 
-    # 1. TẠO GIÁO VIÊN
+    # 1. Teachers
     print("Creating Teachers...")
     teachers_data = [
         {
             "u": "admin", 
             "n": "Teacher One", 
             "c": "GV001", 
-            "email": "teacher1@example.com", # <--- Thêm mail
+            "email": "teacher1@example.com",
             "avt": "assets/img/teacher/gv001.jpg"
         },
         {
             "u": "gv002", 
             "n": "Teacher Two", 
             "c": "GV002", 
-            "email": "teacher2@example.com", # <--- Thêm mail
+            "email": "teacher2@example.com",
             "avt": "assets/img/teacher/gv002.jpg"
         }
     ]
@@ -95,7 +90,7 @@ def seed():
     gv1 = session.query(User).filter_by(username="admin").first()
     gv2 = session.query(User).filter_by(username="gv002").first()
 
-    # 2. TẠO LỚP HỌC PHẦN
+    # 2. Courses
     print("Creating Courses...")
     courses_data = [
         {"code": "7080518", "name": "Thị giác máy tính", "teacher": gv1, "credits": 3},
@@ -116,7 +111,7 @@ def seed():
         else:
             course_objects.append(existing)
 
-    # 3. TẠO SINH VIÊN
+    # 3. Students
     print("Creating Students...")
     counter = 1 
     total_new = 0
@@ -124,7 +119,7 @@ def seed():
     
     for course in course_objects:
         num_students = random.randint(15, 20)
-        print(f" -> Lớp HP {course.course_name}: Thêm {num_students} sinh viên.")
+        print(f" -> Course {course.course_name}: adding {num_students} students.")
         
         for _ in range(num_students):
             mssv = f"990000{counter:04d}"
@@ -135,16 +130,12 @@ def seed():
 
             name = generate_random_name()
             
-            # --- LOGIC XỬ LÝ AVATAR SINH VIÊN ---
-            # Kiểm tra xem có file ảnh trùng tên MSSV không
             student_avatar_path = check_student_avatar(mssv)
             if student_avatar_path:
                 count_with_avatar += 1
-            # ------------------------------------
             email_sv = f"{mssv}@humg.edu.vn"
             user_sv = User(
                 username=mssv, password="123", fullname=name, user_code=mssv, role="student"
-                # User SV không cần phone và avatar (để null)
             )
             session.add(user_sv)
             session.commit() 
@@ -166,8 +157,8 @@ def seed():
     session.close()
     
     print("-" * 50)
-    print(f"✅ XONG! Đã thêm {total_new} sinh viên.")
-    print(f"📸 Tìm thấy {count_with_avatar} sinh viên có ảnh sẵn trong 'data/raw_faces'.")
+    print(f"Done. Added {total_new} students.")
+    print(f"{count_with_avatar} students have a photo in 'data/raw_faces'.")
     print("-" * 50)
 
 if __name__ == "__main__":

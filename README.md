@@ -1,167 +1,156 @@
 # Face Recognition Based Student Attendance System
 
-<div align="center">
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![GUI](https://img.shields.io/badge/GUI-PyQt5-green?logo=qt&logoColor=white)
+![Model](https://img.shields.io/badge/Model-InsightFace%20buffalo__l-orange)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
-![Framework](https://img.shields.io/badge/Framework-PyQt5-green?style=for-the-badge&logo=qt)
-![AI Model](https://img.shields.io/badge/Model-RetinaFace%20%26%20ArcFace-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge)
+A desktop application that takes class attendance from a webcam. A teacher opens a course, starts the camera, and every recognized student is marked present automatically. Students sign in to review their own attendance history.
 
-**Hệ thống điểm danh sinh viên thông minh sử dụng Deep Learning với độ chính xác cao.**
+## Features
 
-</div>
+- **Live recognition:** webcam frames are matched against stored face embeddings using InsightFace and cosine similarity.
+- **Role-based UI:** separate teacher and student interfaces, each with its own login.
+- **Attendance management:** per-course, per-date records with *Present*, *Absent* and *Not yet marked* states; teachers can override any status manually.
+- **Student enrollment:** add a student and capture their face in one step. The embedding cache is updated immediately, so no separate training stage is needed.
+- **Excel import and export:** import a class roster (`.xlsx`, `.xls`, `.csv`) and export attendance reports to `.xlsx`.
+- **Search and filter:** find students by name or ID and filter by attendance status.
 
----
+## How It Works
 
-## 📖 Giới Thiệu (Overview)
+1. **Detect:** InsightFace finds faces in each webcam frame.
+2. **Embed:** each face is converted into a 512-dimensional embedding.
+3. **Match:** the embedding is compared with the embeddings of the students enrolled in the selected course using cosine similarity.
+4. **Record:** a match above `SIMILARITY_THRESHOLD` (default `0.5`) marks the student present with a timestamp.
 
-Dự án này là giải pháp chuyển đổi số cho việc quản lý lớp học, thay thế phương pháp điểm danh truyền thống. Hệ thống tích hợp các mô hình Deep Learning SOTA (**RetinaFace** cho phát hiện và **ArcFace** cho nhận diện) để đảm bảo khả năng nhận diện chính xác trong nhiều điều kiện môi trường khác nhau.
+<img src="docs/images/pipeline_flow.png" alt="Recognition pipeline" width="50%">
 
-Giao diện người dùng được xây dựng bằng **PyQt5 (Widgets + QSS)**, trực quan và dễ thao tác cho giảng viên.
+## Tech Stack
 
-## 🚀 Tính Năng Nổi Bật (Key Features)
+| Area | Technology |
+| :--- | :--- |
+| Language | Python 3.10+ (tested on 3.12) |
+| GUI | PyQt5 (Widgets + QSS stylesheets) |
+| Face recognition | InsightFace (`buffalo_l` model pack), ONNX Runtime |
+| Computer vision | OpenCV, NumPy |
+| Persistence | SQLite via SQLAlchemy |
+| Spreadsheets | pandas, openpyxl |
 
-* **⚡ Real-time Inference:** Nhận diện và xử lý luồng video thời gian thực với độ trễ thấp (< 50ms/face).
-* **🎯 Robust Accuracy:** Khả năng nhận diện tốt ngay cả khi khuôn mặt bị nghiêng, che khuất một phần, đeo kính hoặc thay đổi biểu cảm.
-* **🖥 Modern UI/UX:** Giao diện PyQt5 trực quan cho giảng viên và sinh viên.
-* **📊 Auto Logging:** Tự động ghi nhận thời gian ra/vào và xuất báo cáo điểm danh ra file Excel (.xlsx) hoặc CSV.
-* **🛡 Anti-Spoofing (Basic):** Cơ chế lọc ngưỡng (thresholding) để giảm thiểu nhận diện sai.
+## Project Structure
 
-## 🛠 Tech Stack
-
-| Thành phần | Công nghệ / Thư viện | Chi tiết |
-| :--- | :--- | :--- |
-| **Language** | Python 3.10+ | Ngôn ngữ lập trình chính |
-| **GUI Framework** | PyQt5 (Widgets + QSS) | Giao diện người dùng |
-| **Computer Vision** | OpenCV, Pillow | Xử lý ảnh đầu vào |
-| **Face Detection** | RetinaFace | Mô hình phát hiện khuôn mặt (InsightFace) |
-| **Face Recognition** | ArcFace (ResNet) | Trích xuất đặc trưng khuôn mặt (InsightFace) |
-| **Data Processing** | Pandas, NumPy | Xử lý dữ liệu và xuất báo cáo |
-| **Optimization** | ONNX Runtime | Tăng tốc độ inference trên CPU/GPU |
-
-## 📂 Cấu Trúc Dự Án (Project Structure)
-
-```bash
-Face-Recognition-Based-Student-Attendance-System/
-├── app/                        # Source code chính
-│   ├── ui/                     # Giao diện PyQt5 (login, teacher, student, camera dialog)
-│   ├── controllers/            # Logic nghiệp vụ, kết nối UI với database
-│   ├── services/               # Nhận diện khuôn mặt (InsightFace, cache, cosine)
-│   ├── database/               # SQLAlchemy engine + models
-│   ├── config.py               # Đường dẫn và tham số cấu hình (nguồn duy nhất)
-│   └── constants.py            # Hằng số trạng thái điểm danh
-├── assets/                     # Tài nguyên tĩnh (icons, ảnh, file .qss)
-├── data/                       # Dữ liệu runtime (tự sinh, KHÔNG commit)
-│   ├── raw_faces/              # Ảnh gốc <MSSV>.jpg để dựng cache bằng script
-│   ├── enrolled_faces/         # Ảnh chụp khi thêm sinh viên trong app
-│   ├── face_data.pkl           # Embeddings { mssv: vector }
-│   └── student_management.db   # SQLite
-├── samples/                    # File Excel mẫu để import lớp học
-├── scripts/                    # Script tiện ích (seed_data, build_face_cache)
-├── docs/images/                # Ảnh minh hoạ cho README
-├── main.py                     # Entry point của ứng dụng
-├── requirements.txt            # Danh sách thư viện
-└── README.md                   # Tài liệu dự án
+```
+.
+├── app/
+│   ├── ui/            # PyQt5 windows and dialogs (login, teacher, student, camera)
+│   ├── controllers/   # Business logic between the UI and the database
+│   ├── services/      # Face recognition: model, embedding cache, cosine matching
+│   ├── database/      # SQLAlchemy engine, session factory and models
+│   ├── config.py      # Paths and tunables (single source of truth)
+│   └── constants.py   # Attendance status values
+├── assets/            # Icons, images and QSS stylesheets
+├── data/              # Runtime data: SQLite DB, embeddings, face photos (gitignored)
+├── samples/           # Sample class roster for the Excel import
+├── scripts/           # Utilities: seed_data, build_face_cache
+├── docs/images/       # README screenshots
+└── main.py            # Application entry point
 ```
 
-## 🧠 Nguyên Lý Hoạt Động (Workflow)
+## Getting Started
 
-Hệ thống hoạt động dựa trên luồng xử lý dữ liệu (pipeline) gồm 4 giai đoạn chính, kết hợp giữa mô hình phát hiện (Detection) và nhận diện (Recognition):
+### Prerequisites
 
-<img src="docs/images/pipeline_flow.png" alt="Attendance Success" width="50%">
+- Python 3.10 or newer
+- A webcam
+- Internet access on first run: InsightFace downloads the `buffalo_l` model (about 280 MB) to `~/.insightface`
+- Optional: an NVIDIA GPU with `onnxruntime-gpu` installed. CUDA is used automatically when available; otherwise the CPU is used.
 
-1.  **Face Detection:** Quét toàn bộ khung hình để tìm vị trí khuôn mặt.
-2.  **Face Alignment:** Căn chỉnh khuôn mặt dựa trên 5 điểm mốc (mắt, mũi, miệng) để chuẩn hóa góc nhìn.
-3.  **Feature Extraction:** Chuyển đổi khuôn mặt thành vector 512 chiều.
-4.  **Matching:** So sánh vector hiện tại với cơ sở dữ liệu vector đã đăng ký sử dụng độ đo Cosine Similarity.
-
-## ⚙️ Cài Đặt (Installation)
-
-### 1\. Yêu cầu (Prerequisites)
-
-  * Python 3.10+ (đã kiểm tra trên 3.12)
-  * Webcam (hoặc IP Camera)
-  * **(Khuyến nghị)** NVIDIA GPU + CUDA để đạt FPS cao nhất.
-
-### 2\. Các bước cài đặt
-
-**Bước 1: Clone Repository**
+### Installation
 
 ```bash
-git clone [https://github.com/devk1ngz/Face-Recognition-Based-Student-Attendance-System.git](https://github.com/devk1ngz/Face-Recognition-Based-Student-Attendance-System.git)
+git clone https://github.com/devk1ngz/Face-Recognition-Based-Student-Attendance-System.git
 cd Face-Recognition-Based-Student-Attendance-System
-```
 
-**Bước 2: Thiết lập môi trường ảo**
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-```bash
-# Windows
-python -m venv venv
-.\venv\Scripts\activate
-
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**Bước 3: Cài đặt thư viện**
-
-```bash
 pip install -r requirements.txt
 ```
 
-> *Lưu ý: Lần đầu chạy, thư viện `insightface` sẽ tự tải model (\~300MB), quá trình này có thể mất vài phút.*
+### Run
 
-## 📖 Hướng Dẫn Sử Dụng (User Guide)
+```bash
+python main.py
+```
 
-1.  **Khởi chạy:**
+The database is created on first launch. Register a teacher account from the login screen, or load demo data as described below.
 
-    ```bash
-    python main.py
-    ```
+### Demo data (optional)
 
-2.  **Chuẩn bị dữ liệu (tuỳ chọn):**
+```bash
+python -m scripts.seed_data          # sample teachers, courses and students
+python -m scripts.build_face_cache   # embeddings from data/raw_faces/<student_id>.jpg
+```
 
-    ```bash
-    python -m scripts.seed_data          # tạo giảng viên/lớp/sinh viên mẫu (tài khoản admin / gv002, mật khẩu 123)
-    python -m scripts.build_face_cache   # dựng data/face_data.pkl từ ảnh <MSSV>.jpg trong data/raw_faces/
-    ```
+Seeded logins (development only, passwords are stored in plain text):
 
-3.  **Đăng ký sinh viên mới:**
+| Role | Username | Password |
+| :--- | :--- | :--- |
+| Teacher | `admin`, `gv002` | `123` |
+| Student | the student ID, e.g. `9900000001` | `123` |
 
-      * Vào Tab **"Thêm sinh viên"**.
-      * Nhập MSSV, Họ Tên, Ngày tháng năm sinh và tên lớp.
-      * Nhấn **"Chụp ảnh"**: hệ thống lưu sinh viên vào database, lưu ảnh vào `data/enrolled_faces/` và cập nhật vector đặc trưng ngay lập tức (không cần bước huấn luyện riêng).
+Run the scripts from the repository root with `python -m`, not `python scripts/<name>.py`.
 
-4.  **Điểm danh:**
+## Usage
 
-      * Quay lại màn hình **Dashboard**.
-      * Hệ thống tự động nhận diện và hiển thị thông tin lên màn hình.
-      * Kết quả được lưu tự động vào hệ thống.
+1. **Sign in** as a teacher and pick a course in the sidebar.
+2. **Add students** one by one with *Thêm sinh viên* (fill in the form and capture a photo), or import a roster with *Nhập file lớp*. See `samples/dsa_list.xlsx` for the expected layout.
+3. **Take attendance** with *Bắt đầu điểm danh*. Recognized students are marked present; change any status manually from the table if needed.
+4. **Export** the result with *Xuất Excel*.
+5. **Students** sign in with their own account to see their attendance history per course.
 
-## 📸 Demo Hình Ảnh (Screenshots)
+The interface text is in Vietnamese.
 
-| Giao diện giáo viên | Giao diện sinh viên |
+## Configuration
+
+Everything tunable lives in [`app/config.py`](app/config.py):
+
+| Setting | Default | Purpose |
+| :--- | :--- | :--- |
+| `SIMILARITY_THRESHOLD` | `0.5` | Minimum cosine similarity to accept a match |
+| `CAMERA_INDEX` | `0` | Webcam device index |
+| `FACE_MODEL_NAME` | `buffalo_l` | InsightFace model pack |
+| `FACE_DET_SIZE` | `(640, 640)` | Detector input size |
+| `DATA_DIR` | `<repo>/data` | Location of the database, photos and embedding cache |
+
+## Data and Privacy
+
+`data/` holds personal data (face photos, embeddings, the student database) and is excluded from version control. Do not commit it, and obtain consent before collecting face data from real students.
+
+## Screenshots
+
+| Teacher dashboard | Student dashboard |
 | :---: | :---: |
-| ![Teacher Window](docs/images/teacher_ui.png) | ![Student Window](docs/images/student_ui.png) |
-## Kết quả điểm danh ghi nhận
+| ![Teacher window](docs/images/teacher_ui.png) | ![Student window](docs/images/student_ui.png) |
 
-| Kết quả khi giáo viên điểm danh thành công|
+| Attendance in progress |
 | :---: |
-| ![Attendance Success](docs/images/attendance_result.png) |
+| ![Attendance result](docs/images/attendance_result.png) |
 
+## Known Limitations
 
+- Passwords are stored and compared in plain text. Do not deploy this as is.
+- `Student.mssv` is globally unique, so a student cannot be enrolled in more than one course.
+- Only the first face detected in an enrollment photo is used.
+- There is no automated test suite.
 
-## 🤝 Đóng Góp (Contributing)
+## License and Third-Party Terms
 
-Mọi đóng góp (Pull Requests, Issues) đều được hoan nghênh\!
-Nếu bạn thấy dự án hữu ích, hãy để lại một ⭐ **Star** nhé\!
+This repository does not currently grant an open-source license; all rights are reserved by the author. Two dependencies restrict how the project can be used and redistributed:
 
-## 📄 License
+- **InsightFace models:** the InsightFace *code* is MIT-licensed, but the pretrained models, including the `buffalo_l` pack this project downloads at runtime, are available **for non-commercial research purposes only**. Commercial use requires a separate license from InsightFace ([terms](https://github.com/deepinsight/insightface#license)).
+- **PyQt5:** distributed under GPL v3 or a commercial license from Riverbank Computing. Distributing this application together with PyQt5 must comply with the GPL v3, or use a commercial PyQt license.
 
-Dự án thuộc bản quyền **MIT License**.
+Use this project for learning, coursework and research. Do not use it in a commercial or production setting without resolving both points above.
 
------
+## Author
 
-**Author:** [Devk1ngz](https://github.com/devk1ngz)
+[Devk1ngz](https://github.com/devk1ngz)

@@ -38,9 +38,7 @@ def get_student_courses(student_id):
     session.close()
     return courses
 def get_student_course_details(student_id):
-    """
-    Trả về danh sách các lớp sinh viên đang học, kèm thông tin giảng viên.
-    """
+    """List the student's courses with teacher info."""
     session = get_session()
     student = session.query(Student).filter_by(id=student_id).first()
     

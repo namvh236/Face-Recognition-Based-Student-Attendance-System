@@ -1,26 +1,25 @@
 import os
 
-# Đường dẫn gốc của dự án
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Tài nguyên tĩnh (được commit)
+# Static resources (committed)
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 IMG_DIR = os.path.join(ASSETS_DIR, "img")
 STYLES_DIR = os.path.join(ASSETS_DIR, "styles")
 
-# Dữ liệu runtime (sinh ra khi chạy, KHÔNG commit - xem .gitignore)
+# Runtime data (generated, gitignored)
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 DB_PATH = os.path.join(DATA_DIR, "student_management.db")
 DB_URI = f"sqlite:///{DB_PATH}"
 
-RAW_FACES_DIR = os.path.join(DATA_DIR, "raw_faces")            # Ảnh gốc nhập tay: <mssv>.jpg|png
-ENROLLED_FACES_DIR = os.path.join(DATA_DIR, "enrolled_faces")  # Ảnh chụp khi thêm sinh viên trong app
+RAW_FACES_DIR = os.path.join(DATA_DIR, "raw_faces")            # Hand-placed photos: <mssv>.jpg|png
+ENROLLED_FACES_DIR = os.path.join(DATA_DIR, "enrolled_faces")  # Photos captured by the "add student" dialog
 FACE_CACHE_FILE = os.path.join(DATA_DIR, "face_data.pkl")      # { mssv: embedding }
 
-# Nhận diện khuôn mặt
+# Face recognition
 FACE_MODEL_NAME = "buffalo_l"
 FACE_DET_SIZE = (640, 640)
-SIMILARITY_THRESHOLD = 0.5  # Cosine similarity tối thiểu để chấp nhận một khuôn mặt
+SIMILARITY_THRESHOLD = 0.5  # Minimum cosine similarity to accept a match
 CAMERA_INDEX = 0
